@@ -19,8 +19,9 @@ USER_AGENT = "ItineraryThatHoldsUp-CS222/0.1 (https://github.com/Forevermyhero/c
 
 
 class ProviderError(Exception):
-    def __init__(self, provider, message):
+    def __init__(self, provider, message, http_status=None):
         self.provider = provider
+        self.http_status = http_status
         super().__init__(message)
 
 
@@ -30,6 +31,7 @@ class Place:
     opening_expression: str | None = None
     estimated_cost: Decimal | None = None
     website: str | None = None
+    activity_title: str | None = None
 
 
 @dataclass
@@ -90,12 +92,24 @@ class PublicDataClient:
             if len(response.content) > 3_000_000:
                 raise ProviderError(provider, "Provider response exceeded the size limit.")
             payload = response.json()
-        except (requests.RequestException, ValueError, ProviderError):
+        except (requests.RequestException, ValueError, ProviderError) as error:
+            status = getattr(getattr(error, "response", None), "status_code", None)
+            if isinstance(status, int):
+                reason = f"HTTP {status}"
+            elif isinstance(error, requests.Timeout):
+                reason = "request timed out"
+            elif isinstance(error, requests.exceptions.ProxyError):
+                reason = "proxy connection failed"
+            elif isinstance(error, requests.ConnectionError):
+                reason = "connection failed"
+            else:
+                reason = "invalid or oversized JSON response"
             message = (f"{provider} is unavailable or returned invalid data. "
-                       "Check network access or retry later; no live data was fabricated.")
+                       f"Reason: {reason}. Retry later; no live data was fabricated.")
             self.event(title=f"Query {provider}", status="failed", provider=provider,
                        detail=message, url=public_url, key=event_id, network_request=True)
-            raise ProviderError(provider, message) from None
+            raise ProviderError(provider, message,
+                                status if isinstance(status, int) else None) from None
         with self.lock:
             if len(self.cache) >= 128:
                 self.cache.pop(next(iter(self.cache)))
@@ -135,7 +149,10 @@ class PublicDataClient:
         try:
             row = rows[0]
             tags = row.get("extratags") or {}
-            return Place(Location(id=f'osm:{row["osm_type"]}:{row["osm_id"]}', name=name,
+            label = row.get("name") or row.get("display_name")
+            resolved_name = label.split(",")[0] if isinstance(label, str) and label else name
+            return Place(Location(id=f'osm:{row["osm_type"]}:{row["osm_id"]}',
+                                  name=resolved_name,
                                   latitude=float(row["lat"]), longitude=float(row["lon"])),
                          tags.get("opening_hours"),
                          website=safe_link(tags.get("website") or tags.get("contact:website")))
@@ -144,10 +161,23 @@ class PublicDataClient:
 
     def attractions(self, center):
         """Request a small nearby attraction list, with source hours and website tags."""
-        query = ('[out:json][timeout:15];nwr(around:3000,'
-                 f'{center.latitude},{center.longitude})'
-                 '["tourism"~"^(museum|attraction|gallery)$"];out center 16;')
-        data = self.get_json("Overpass", "https://overpass-api.de/api/interpreter", {"data": query})
+        def query(radius, timeout):
+            return (f'[out:json][timeout:{timeout}];nwr(around:{radius},'
+                    f'{center.latitude},{center.longitude})'
+                    '["tourism"~"^(museum|attraction|gallery)$"];out center 16;')
+
+        url = "https://overpass-api.de/api/interpreter"
+        try:
+            data = self.get_json("Overpass", url, {"data": query(3000, 15)})
+        except ProviderError as error:
+            # One smaller request on the same host for explicit server overload only.
+            # Never retry a policy/refusal/429/proxy error or hide its recorded outcome.
+            if error.http_status not in {502, 503, 504}:
+                raise
+            self.event(title="Reduce the nearby search area", provider="Overpass",
+                       status="completed", detail=f"The server returned HTTP {error.http_status}. "
+                       "Try one smaller 1.5 km area on the same service.")
+            data = self.get_json("Overpass", url, {"data": query(1500, 8)})
         places = []
         if not isinstance(data, dict) or not isinstance(data.get("elements"), list):
             raise ProviderError("Overpass", "Overpass returned no usable place data.")

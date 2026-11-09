@@ -37,7 +37,8 @@ def heuristic_plan(request, fixed, places, travel, hours):
                     a <= utc(start) and utc(end) <= b for a, b in windows
                 ):
                     continue
-                candidate = Activity(id=activity_id, name=place.location.name,
+                candidate = Activity(id=activity_id,
+                                     name=place.activity_title or f"Visit {place.location.name}",
                                      location=place.location, start_time=start, end_time=end,
                                      estimated_cost=place.estimated_cost)
                 if fits(candidate, activities, travel_lookup):

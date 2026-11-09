@@ -10,7 +10,7 @@ No verified remote GitHub Actions result is claimed.
 
 | Check | Observed result |
 | --- | --- |
-| Current offline suite, including typed tools | **141 passed**, no failed/skipped cases; statement coverage **97.99%** |
+| Current offline suite, including typed tools and planner explanations | **152 passed**, no failed/skipped cases; statement coverage **98.09%** |
 | Coverage gate | Required 90% reached |
 | Style | `python -m flake8 src tests scripts` passed |
 | Hash-locked installation | Dependencies were installed in a clean Python 3.12 environment; versions and checksum hashes were verified unchanged when the lock moved to the repository root |
@@ -21,6 +21,13 @@ No verified remote GitHub Actions result is claimed.
 | Stream behavior | A first progress event reaches the client while an injected slow lookup is still waiting; terminal success/errors are handled separately |
 | Tool workbench | Portable bundle and backend demo tested in Chromium: coordinates, opening tags, unknowns, directed times, JSON export, cache, failed live-mode handling and offline/mobile behavior; public responses were mocked |
 | Cloud startup preparation | Render YAML parsed; hash-locked Gunicorn installed; all prior dependency pins retained. The same Gunicorn factory/config passed local health, four-tool discovery, streamed five-activity planning, and both browser smoke flows on port 8001 |
+| Revised planner browser | Hotel check-in stays fixed; four visits have descriptive actions/origins; sample steps show 7/7 finished; Chinese Chicago works; other cities submit live requests; only untouched sample events are removed, while edited events survive. Live HTTP is injected for this boundary test |
+
+The latest planner clarification is verified locally and requires Render's manual
+deployment to update the public service (automatic deployment is disabled).
+Historical `cf4c5b4` evidence below refers to the previous interview example.
+New sample inputs use 15:00–15:30 hotel check-in. Overpass overload retries and
+diagnostics are covered with injected HTTP errors; no successful remote fix is claimed.
 
 `render.yaml` selects a Free Python web service. The user's 2026-11-09 Render log
 confirms `cf4c5b4` built, started Gunicorn on port 10000, passed `/api/health` with

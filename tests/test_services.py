@@ -197,6 +197,88 @@ def test_demo_pipeline_preserves_baseline_and_is_repeatable():
     assert "synthetic" in first["notes"][0]
 
 
+@pytest.mark.parametrize("destination", ["Chicago", "芝加哥", "Chicago, IL"])
+def test_sample_art_museum_alias_and_activity_origins(destination):
+    data = example_request()
+    data["destination"] = destination
+    result = plan_trip(PlanRequest.model_validate(data))
+    assert result["request"]["trip"]["destination"] == "Chicago"
+    fixed = result["request"]["original_fixed_events"][0]
+    assert fixed["name"] == "Hotel check-in"
+    assert "15:00" in fixed["start_time"] and "15:30" in fixed["end_time"]
+    summary = result["planning_summary"]
+    assert summary["nearby_search"] == "sample_not_queried"
+    assert len(summary["candidate_activities"]) == 4
+    assert all("not fetched online" in c["reason"] for c in summary["candidate_activities"])
+    names = [a["name"] for a in result["request"]["trip"]["activities"]]
+    assert "Walk through Millennium Park" in names
+    assert "Explore art at the Art Institute of Chicago" in names
+
+
+def test_live_nearby_search_uses_the_requested_venue_and_explains_failures():
+    from src.backend.app.models import Location
+
+    class AnchoredClient(FakeMapClient):
+        def city(self, destination):
+            return Location(id="center", name="City center", latitude=41.0,
+                            longitude=-87.0), "America/Chicago"
+
+        def attractions(self, center):
+            assert center.id == "demo:art"  # The requested museum, not the city center.
+            return super().attractions(center)
+
+    data = example_request()
+    data.update(data_mode="live", fixed_events=[], budget=None)
+    request = PlanRequest.model_validate(data)
+    result = plan_trip(request, AnchoredClient())
+    assert result["planning_summary"]["search_center"]["id"] == "demo:art"
+    assert result["planning_summary"]["nearby_search"] == "completed"
+    partial = plan_trip(request, AnchoredClient(attraction_error=True))
+    assert partial["planning_summary"]["nearby_search"] == "failed"
+    assert len(partial["planning_summary"]["candidate_activities"]) == 1
+    assert any("no replacement nearby activities" in note for note in partial["notes"])
+
+
+def test_nominatim_reports_the_matched_name_instead_of_echoing_a_broad_query():
+    row = {"osm_type": "way", "osm_id": 42, "lat": "41.88", "lon": "-87.63",
+           "display_name": "Art Institute of Chicago, Chicago, Illinois"}
+    place = PublicDataClient(FakeSession([row])).find_place("Art Museum", "Chicago")
+    assert place.location.name == "Art Institute of Chicago"
+
+
+@pytest.mark.parametrize("status,expected_calls", [(403, 1), (429, 1), (503, 2), (504, 2)])
+def test_overpass_retries_only_server_overload_on_the_same_host(status, expected_calls):
+    class SequenceSession(FakeSession):
+        def get(self, url, **kwargs):
+            if not self.calls:
+                self.calls.append((url, kwargs))
+                response = Mock(status_code=status)
+                raise requests.HTTPError(response=response)
+            return super().get(url, **kwargs)
+
+    session = SequenceSession({"elements": []})
+    client = PublicDataClient(session)
+    if expected_calls == 1:
+        with pytest.raises(ProviderError, match=f"HTTP {status}"):
+            client.attractions(demo_places()[0].location)
+    else:
+        assert client.attractions(demo_places()[0].location) == []
+        assert "around:1500" in session.calls[-1][1]["params"]["data"]
+    assert len(session.calls) == expected_calls
+    assert {url for url, _ in session.calls} == {"https://overpass-api.de/api/interpreter"}
+
+
+@pytest.mark.parametrize("error,reason", [
+    (requests.exceptions.ProxyError(), "proxy connection failed"),
+    (requests.ConnectionError(), "connection failed"),
+])
+def test_connection_diagnostics_do_not_retry_a_refused_network(error, reason):
+    session = FakeSession(error=error)
+    with pytest.raises(ProviderError, match=reason):
+        PublicDataClient(session).attractions(demo_places()[0].location)
+    assert len(session.calls) == 1
+
+
 def test_live_pipeline_uses_mocked_providers_without_claiming_coverage():
     data = example_request()
     data.update(data_mode="live", fixed_events=[], requested_places=[], budget=None)

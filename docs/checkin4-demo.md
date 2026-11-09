@@ -4,8 +4,9 @@
 
 1. Open the main branch and `docs/code-tour.zh-CN.md` to locate the modules.
 2. Run the README startup command from the repository root.
-3. Load the Chicago example. Point out the fixed interview, destination, dates and desired place.
-4. Click **Build & check my itinerary**. Show the unchanged interview and four flexible visits.
+3. Load the Chicago example. Point out hotel check-in at 15:00–15:30 and the Art Museum request.
+4. Click **Build & check my itinerary**. Show the unchanged check-in and four flexible visits.
+   Explain the bundled sample places and the calculated time slots using the new origin/method panel.
 5. **Research log** opens above the results and stays open. Use **Previous step** / **Next step**,
    or click a step title, to explain each recorded operation. **Follow latest** tracks new updates.
    Reviewing a record does not repeat a lookup. Explain that the example is offline and labeled.

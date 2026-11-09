@@ -8,18 +8,18 @@
     "architecture"
   ],
   "requested_places": [
-    "Art Institute of Chicago"
+    "Art Museum"
   ],
   "budget": "100.00",
   "data_mode": "demo",
   "planner": "heuristic",
   "fixed_events": [
     {
-      "id": "interview",
-      "name": "Interview",
-      "location": "Demo office",
-      "start_time": "2026-11-16T10:00",
-      "end_time": "2026-11-16T11:00"
+      "id": "hotel-check-in",
+      "name": "Hotel check-in",
+      "location": "Palmer House",
+      "start_time": "2026-11-16T15:00",
+      "end_time": "2026-11-16T15:30"
     }
   ]
 }

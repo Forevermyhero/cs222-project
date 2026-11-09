@@ -6,11 +6,14 @@ import { $, element, renderResult, renderValidation, renderStep, resetResearch, 
 let current = null;
 let eventCounter = 0;
 let controller = null;
+let autoCityMode = false;
 
-function addEvent(data = {}) {
+function addEvent(data = {}, sample = false) {
   const fragment = $("event-template").content.cloneNode(true);
   const card = fragment.querySelector("fieldset");
   card.dataset.id = data.id || `event-${++eventCounter}`;
+  card.dataset.sample = String(sample);
+  card.addEventListener("input", () => { card.dataset.sample = "false"; });
   for (const [name, value] of Object.entries({
     "event-name": data.name, "event-location": data.location,
     "event-start": data.start_time, "event-end": data.end_time,
@@ -48,12 +51,14 @@ async function loadExample() {
     $("requested-places").value = data.requested_places.join("\n");
     $("budget").value = data.budget;
     $("data-mode").value = data.data_mode;
+    autoCityMode = false;
     $("planner").value = data.planner;
     $("fixed-events").replaceChildren();
-    data.fixed_events.forEach(addEvent);
+    data.fixed_events.forEach((event) => addEvent(event, true));
     clearResult();
     $("empty-title").textContent = "The good part starts with a plan.";
-    $("empty-copy").textContent = "Try the Chicago example. See a fixed interview stay put while four places find their way into the day.";
+    $("empty-copy").textContent = "Try the Chicago sample: explore art, visit museum exhibits and take a walk, while keeping hotel check-in at 15:00.";
+    $("city-mode-note").textContent = "";
     $("research-panel").hidden = true;
     updateMode();
     showStatus("Example loaded. Build the itinerary when you're ready.");
@@ -62,8 +67,33 @@ async function loadExample() {
 
 function updateMode() {
   $("mode-note").textContent = $("data-mode").value === "demo"
-    ? "Example hours, prices and travel times are synthetic. No websites are contacted."
-    : "Uses public map services without an API key. Watch each lookup in the research log; unavailable facts remain unverified.";
+    ? "Four Chicago sample places are bundled with the app. Hours, prices and transfers are synthetic; no websites are contacted."
+    : "Query real map records. Nearby search may fail; missing facts stay unknown. Review the matched venue and your reservation addresses.";
+}
+
+function alignCityAndMode(removeSamples = false) {
+  const city = $("destination").value.trim();
+  if (!city) return;
+  if (["chicago", "chicago, il", "chicago, illinois", "芝加哥"].includes(city.toLowerCase())) {
+    if (autoCityMode) {
+      $("data-mode").value = "demo"; autoCityMode = false;
+      $("city-mode-note").textContent = ""; updateMode();
+    }
+    return;
+  }
+  const changed = $("data-mode").value === "demo";
+  if (changed) autoCityMode = true;
+  $("data-mode").value = "live";
+  // Remove only untouched seeded Chicago events, never reservations edited/added by the user.
+  // Wait until submit so a blur handler cannot move the button during its click.
+  const samples = removeSamples === true ? [...$("fixed-events").querySelectorAll('[data-sample="true"]')] : [];
+  samples.forEach((card) => card.remove());
+  if (changed || samples.length) {
+    $("city-mode-note").textContent = `Using public map data for ${city}. ${samples.length ? "Removed the untouched Chicago sample hotel check-in. " : ""}Your added or edited reservations are kept; review their addresses.`;
+    clearResult();
+    $("research-panel").hidden = true;
+  }
+  updateMode();
 }
 
 function formPayload() {
@@ -85,6 +115,7 @@ function formPayload() {
 
 $("trip-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  alignCityAndMode(true);
   const payload = formPayload();
   clearResult();
   resetResearch(payload.data_mode);
@@ -109,7 +140,8 @@ $("trip-form").addEventListener("submit", async (event) => {
 
 $("load-example").addEventListener("click", loadExample);
 $("add-event").addEventListener("click", () => addEvent());
-$("data-mode").addEventListener("change", updateMode);
+$("destination").addEventListener("input", () => alignCityAndMode());
+$("data-mode").addEventListener("change", () => { autoCityMode = false; alignCityAndMode(); updateMode(); });
 $("step-previous").addEventListener("click", () => reviewStep(-1));
 $("step-next").addEventListener("click", () => reviewStep(1));
 $("step-follow").addEventListener("click", followResearch);

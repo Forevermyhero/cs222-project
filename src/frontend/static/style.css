@@ -457,6 +457,19 @@ button:disabled {
   font: 22px Georgia, serif;
   margin: 23px 0 8px;
 }
+.plan-explanation {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.plan-explanation p, .activity-explanation {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.plan-explanation h3:not(:first-child) {
+  margin-top: 17px;
+}
 .activity {
   display: grid;
   grid-template-columns: 91px 1fr;

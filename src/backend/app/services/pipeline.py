@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from ..models import Activity, OpeningHours, OpeningWindow, TravelTime, Trip, ValidationRequest
 from ..time_utils import localize
 from ..validator import utc, validate_itinerary
-from .demo import demo_places
+from .demo import canonical_destination, demo_places, demo_requested_ids
 from .generation import heuristic_plan
 from .opening_hours import expand_hours
 from .providers import ProviderError, PublicDataClient, user_location
@@ -20,6 +20,7 @@ def plan_trip(request, client=None, progress=None):
     The same function powers ordinary JSON responses and the browser's live log.
     Research records describe tool actions, not a model's hidden chain of thought.
     """
+    request = request.model_copy(update={"destination": canonical_destination(request.destination)})
     log = ResearchLog(request.data_mode, progress)
     client = client or PublicDataClient()
     if hasattr(client, "with_observer"):
@@ -41,17 +42,24 @@ def _plan_trip(request, client, log):
     lower = localize(datetime.combine(request.start_date, time.min), zone)
     upper = localize(datetime.combine(request.end_date + timedelta(days=1), time.min), zone)
     opening_zone = request.timezone
+    nearby_status = "not_queried"
+    search_center = None
     if request.data_mode == "demo":
-        if request.destination.casefold() != "chicago":
-            raise ValueError("Demo mode contains only Chicago. Choose live data for other cities.")
+        if request.destination != "Chicago":
+            raise ValueError("The bundled sample trip is Chicago. Select public map data "
+                             "for another city, or load the Chicago example.")
         places = demo_places()
+        requested_ids = demo_requested_ids(request.requested_places, places)
+        nearby_status = "sample_not_queried"
         log.record("Load Chicago example places", status="example", provider="Local examples",
-                   detail="Loaded four bundled places. No website was contacted.")
-        notes.append("DEMO DATA: opening hours, prices, event coordinates and travel times are "
-                     "synthetic fixtures. The heuristic planner does not call an LLM.")
-        for name in request.requested_places:
-            if not any(name.casefold() in p.location.name.casefold() for p in places):
-                raise ValueError(f'Demo data does not contain requested place "{name}".')
+                   detail="Loaded four places written into the app: Art Institute, Field Museum, "
+                   "Millennium Park and Riverwalk. Overpass and venue websites were not called.")
+        notes.append("SAMPLE DATA: these four places are bundled examples. Their opening hours, "
+                     "prices, reservation coordinates and 20-minute transfers are synthetic. "
+                     "Activity times are calculated around your fixed reservations.")
+        if requested_ids:
+            notes.append("In this sample, Art Museum means the Art Institute of Chicago; "
+                         "the remaining visits come from the bundled sample list.")
     else:
         center, city_zone = client.city(request.destination)
         log.record("Resolve the destination", provider="Open-Meteo geocoding",
@@ -62,12 +70,22 @@ def _plan_trip(request, client, log):
                          f"{request.timezone}. All scheduled times use the trip timezone.")
         # Explicit requests are prioritized; no public bulk/autocomplete geocoding.
         places = [client.find_place(name, request.destination) for name in request.requested_places]
+        requested_ids = {p.location.id for p in places}
+        search_center = places[0].location if places else center
+        if places:
+            notes.append(f'Nearby search is centered on the first map match, '
+                         f'"{search_center.name}". A broad term such as Art Museum is not '
+                         "a confirmed venue choice; review the returned place name.")
         try:
-            places += client.attractions(center)
+            places += client.attractions(search_center)
+            nearby_status = "completed"
         except ProviderError as exc:
+            nearby_status = "failed"
             if not places:
-                raise
-            notes.append(str(exc))
+                raise ProviderError("Overpass", str(exc) + " Add a specific venue name to "
+                                    "plan that place even when nearby discovery is unavailable.")
+            notes.append(str(exc) + " Continuing with only the explicitly resolved places; "
+                         "no replacement nearby activities were invented.")
         places = list({p.location.id: p for p in places}.values())[:8]
         if not places:
             raise ProviderError("OpenStreetMap", "No usable activities were found near this city.")
@@ -80,7 +98,7 @@ def _plan_trip(request, client, log):
         if original.latitude is not None:
             location = user_location(original.location, original.latitude, original.longitude)
         elif request.data_mode == "demo":
-            location = user_location(original.location, 41.8810, -87.6290)
+            location = user_location(original.location, 41.8807, -87.6269)
         else:
             resolved = client.find_place(original.location, request.destination)
             location = resolved.location
@@ -96,7 +114,8 @@ def _plan_trip(request, client, log):
                               estimated_cost=cost,
                               fixed=True, priority="high"))
     log.record("Keep the original commitments", provider="Your inputs",
-               detail=f"Retained {len(fixed)} fixed events as a separate validation baseline.")
+               detail=f"Kept {len(fixed)} reservations exactly as entered, including their "
+               "times and locations. They are checked again after scheduling.")
 
     locations = [p.location for p in places] + [a.location for a in fixed]
     locations = list({p.id: p for p in locations}.values())
@@ -133,19 +152,19 @@ def _plan_trip(request, client, log):
             )]))
     log.record("Prepare opening-hour checks", provider="Opening-hours parser",
                status="example" if request.data_mode == "demo" else "completed",
-               detail=f"{len(hours)} locations have usable windows. Missing or unsupported "
-               "expressions remain unverified.")
+               detail="Turn supplied hours such as Mo-Fr 09:00-17:00 into dated visit windows. "
+               f"{len(hours)} locations have usable windows; every visit must fit entirely "
+               "inside one. This step does not fetch websites; missing hours remain unknown.")
 
     # Resolve preferred demo places first without changing the provider's records.
     if request.data_mode == "demo":
         def preference_order(place):
-            requested = any(name.casefold() in place.location.name.casefold()
-                            for name in request.requested_places)
-            return not requested, place.location.id
+            return place.location.id not in requested_ids, place.location.id
         places.sort(key=preference_order)
     planning_step = log.record("Arrange candidate activities", status="running",
                                provider="Rule-based planner",
-                               detail="Looking for slots around fixed events; no LLM is connected.")
+                               detail="Try one-hour visits from 09:00 to 18:00 in 15-minute "
+                               "steps. Keep reservations fixed and leave transfer time.")
     activities, unscheduled = heuristic_plan(request, fixed, places, travel, hours)
     log.record("Arrange candidate activities", provider="Rule-based planner", key=planning_step,
                detail=f"Proposed {len(activities)} activities; {len(unscheduled)} did not fit.")
@@ -168,6 +187,18 @@ def _plan_trip(request, client, log):
     log.record("Check the schedule", provider="Python validator", key=checking_step,
                detail=f"{len(result.violations)} violations; {len(result.warnings)} warnings.")
     sources = source_cards(places + fixed_places, request.data_mode, hours_by_id)
+    scheduled = {a.location.id: a for a in activities if not a.fixed}
+    candidates = [{
+        "location_id": p.location.id, "place_name": p.location.name,
+        "activity_name": (scheduled[p.location.id].name if p.location.id in scheduled
+                          else p.activity_title or f"Visit {p.location.name}"),
+        "scheduled": p.location.id in scheduled,
+        "reason": ("Chosen from the app's four Chicago sample places; not fetched online."
+                   if request.data_mode == "demo" else
+                   "Matched your requested place using Nominatim; review the first match."
+                   if p.location.id in requested_ids else
+                   "Found by Overpass within 3 km of the search center."),
+    } for p in places]
     return {
         "request": validation_request.model_dump(mode="json"),
         "validation": result.model_dump(mode="json"),
@@ -175,6 +206,19 @@ def _plan_trip(request, client, log):
         "data_mode": request.data_mode, "planner": request.planner,
         "notes": notes, "unscheduled_places": unscheduled,
         "research_steps": log.steps, "sources": sources,
+        "planning_summary": {
+            "place_selection": ("Four bundled Chicago places; Art Museum selects the Art "
+                                "Institute. These are sample suggestions, not web discoveries."
+                                if request.data_mode == "demo" else
+                                "Your resolved places first, followed by nearby map results. "
+                                "Only places that fit the time constraints are scheduled."),
+            "schedule_method": "Each flexible visit lasts 60 minutes. Try the earliest free "
+                               "slot between 09:00 and 18:00, every 15 minutes. Keep reservations "
+                               "fixed; check overlap, transfers, supplied hours and budget.",
+            "nearby_search": nearby_status,
+            "search_center": search_center.model_dump(mode="json") if search_center else None,
+            "candidate_activities": candidates,
+        },
         "preparation": preparation_items(validation_request.trip.activities, sources),
         "attributions": (["Synthetic Chicago demonstration fixtures"] if request.data_mode == "demo"
                          else ["Geocoding: Open-Meteo / GeoNames (CC BY 4.0)",

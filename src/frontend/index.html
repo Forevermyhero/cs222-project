@@ -18,7 +18,7 @@
     <section class="intro">
       <div class="intro-copy"><p class="eyebrow">For the places you want to go. And the things you can't move.</p>
         <h1>A trip that fits.<br><em>Even around real life.</em></h1>
-        <p>Keep the interview. Make the museum. Leave enough time in between. Start with your plans, and see how the rest comes together.</p>
+        <p>Keep your hotel check-in. Make the museum. Leave enough time in between. Start with your reservations, and see how the rest comes together.</p>
         <div class="hero-tags"><span>Fixed plans, protected</span><span>Sources you can see</span><span>A plan, not a purchase</span></div>
       </div>
       <div class="travel-sketch" aria-hidden="true">
@@ -32,7 +32,7 @@
           <circle cx="195" cy="145" r="11" fill="#d88d5f"/><circle cx="195" cy="145" r="4" fill="#fffdf6"/>
           <circle cx="330" cy="80" r="14" fill="#b5c69b"/><circle cx="330" cy="80" r="5" fill="#315d4b"/>
         </svg>
-        <div class="sketch-note note-fixed"><span>10:00</span><strong>Something fixed.</strong><small>We'll keep it right here.</small></div>
+        <div class="sketch-note note-fixed"><span>15:00</span><strong>Hotel check-in.</strong><small>We'll keep it right here.</small></div>
         <div class="sketch-note note-discover"><span>AFTER THAT</span><strong>Somewhere new.</strong></div>
         <div class="sketch-footer">The route is a sketch. Your commitments are real.</div>
       </div>
@@ -41,12 +41,14 @@
       <form id="trip-form" class="panel form-panel">
         <div class="section-heading"><div><p class="eyebrow">01 / Start with what you know</p><h2>Your kind of trip</h2></div><button type="button" id="load-example" class="secondary">Load example</button></div>
         <label for="destination">Where are you heading?</label><input id="destination" name="destination" value="Chicago" required maxlength="200" placeholder="City name">
+        <p id="city-mode-note" class="hint" role="status"></p>
         <div class="pair"><div><label for="start-date">First day</label><input id="start-date" type="date" required></div><div><label for="end-date">Last day</label><input id="end-date" type="date" required></div></div>
         <label for="preferences">What sounds like a good day?</label><input id="preferences" placeholder="Museums, architecture, local food">
         <label for="requested-places">Any places on your list? <span>optional · up to 3</span></label><textarea id="requested-places" rows="2" placeholder="One place per line"></textarea>
+        <p class="hint">Try Art Museum in the Chicago sample. In live mode, review the first map match; nearby suggestions are searched around that place.</p>
         <div class="divider"></div>
         <div class="section-heading"><div><p class="eyebrow">02 / The non-negotiables</p><h2>Keep these fixed</h2></div><button id="add-event" type="button" class="secondary">+ Add event</button></div>
-        <p class="hint">Meetings, flights, reservations. Give each one a time and place.</p><div id="fixed-events"></div>
+        <p class="hint">Hotel check-in, a train departure or a dinner reservation. Give each one a time and place.</p><div id="fixed-events"></div>
         <details class="plan-settings"><summary>Timezone &amp; optional budget</summary>
           <label for="timezone">Trip timezone</label><input id="timezone" value="America/Chicago" required placeholder="America/Chicago">
           <label for="budget">Activity budget <span>optional · USD estimates only</span></label><input id="budget" type="number" min="0" step="0.01" placeholder="100.00">
@@ -55,18 +57,20 @@
         <label for="data-mode">Where should the facts come from?</label><select id="data-mode"><option value="demo">Chicago example · offline</option><option value="live">Public map services · live lookup</option></select>
         <p id="mode-note" class="hint">Example hours, prices and travel times are synthetic. No websites are contacted.</p>
         <input id="planner" type="hidden" value="heuristic">
-        <p class="planner-note"><span class="status-dot"></span>Rule-based prototype · no LLM connected</p>
+        <p class="planner-note"><span class="status-dot"></span>Automatic time-slot planner · your reservations stay fixed</p>
         <div class="action-row"><button type="submit" id="plan-button" class="primary">Build &amp; check my itinerary <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 14 14 4M4 4h10v10" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><button type="button" id="cancel-plan" class="secondary" hidden>Stop</button></div>
         <p id="form-status" role="status" aria-live="polite"></p>
       </form>
       <div class="right-column">
         <section id="results" class="panel results" aria-live="polite">
-          <div class="empty-state" id="empty-state"><div class="compass" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 18 18"><path d="M4 14 14 4M4 4h10v10" fill="none" stroke="currentColor" stroke-width="1"/></svg></div><p class="eyebrow">A little room to look forward</p><h2 id="empty-title">The good part<br>starts with a plan.</h2><p id="empty-copy">Try the Chicago example. See a fixed interview stay put while four places find their way into the day.</p><div class="empty-route"><span>YOUR INPUTS</span><i></i><span>SOURCE CHECKS</span><i></i><span>YOUR ITINERARY</span></div></div>
+          <div class="empty-state" id="empty-state"><div class="compass" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 18 18"><path d="M4 14 14 4M4 4h10v10" fill="none" stroke="currentColor" stroke-width="1"/></svg></div><p class="eyebrow">A little room to look forward</p><h2 id="empty-title">The good part<br>starts with a plan.</h2><p id="empty-copy">Try the Chicago sample: explore art, visit museum exhibits and take a walk, while keeping hotel check-in at 15:00.</p><div class="empty-route"><span>YOUR INPUTS</span><i></i><span>SOURCE CHECKS</span><i></i><span>YOUR ITINERARY</span></div></div>
           <div id="result-content" hidden>
             <div class="section-heading result-heading"><div><p class="eyebrow" id="result-mode"></p><h2 id="trip-heading">Your itinerary</h2></div><span id="validity" class="pill"></span></div>
             <p id="trip-summary" class="trip-summary"></p>
             <div class="trip-metrics"><div><strong id="activity-count">0</strong><span>activities</span></div><div><strong id="fixed-count">0</strong><span>kept fixed</span></div><div><strong id="source-count">0</strong><span>place records</span></div></div>
-            <div id="result-notes" class="notice"></div><div id="schedule"></div>
+            <div id="result-notes" class="notice"></div>
+            <div class="plan-explanation"><h3>Where these activities came from</h3><p id="selection-summary"></p><p id="nearby-summary"></p><h3>How the times were chosen</h3><p id="schedule-method"></p></div>
+            <div id="schedule"></div>
             <div class="divider"></div><div class="section-heading"><h3>A quick reality check</h3><span class="eyebrow">Your constraints matter</span></div><div id="issues"></div>
             <div class="result-actions"><button type="button" id="revalidate" class="secondary">Check itinerary again</button><button type="button" id="download" class="secondary">Download itinerary</button></div>
             <p id="attribution" class="attribution"></p>
@@ -90,6 +94,6 @@
     </div>
   </main>
   <footer><span>Itinerary That Holds Up</span><span>A thoughtful route from here to there.</span></footer>
-  <template id="event-template"><fieldset class="event-card"><legend>Fixed commitment</legend><div class="section-heading"><strong class="event-title">This stays in place</strong><button type="button" class="remove-event secondary">Remove</button></div><label>Name<input name="event-name" required maxlength="200" placeholder="Interview"></label><label>Location or address<input name="event-location" required maxlength="200" placeholder="Office address, Chicago"></label><div class="pair"><label>Starts<input name="event-start" type="datetime-local" required></label><label>Ends<input name="event-end" type="datetime-local" required></label></div></fieldset></template>
+  <template id="event-template"><fieldset class="event-card"><legend>Fixed reservation or event</legend><div class="section-heading"><strong class="event-title">This stays in place</strong><button type="button" class="remove-event secondary">Remove</button></div><label>Name<input name="event-name" required maxlength="200" placeholder="Hotel check-in"></label><label>Location or address<input name="event-location" required maxlength="200" placeholder="Hotel or reservation address"></label><div class="pair"><label>Starts<input name="event-start" type="datetime-local" required></label><label>Ends<input name="event-end" type="datetime-local" required></label></div></fieldset></template>
 </body>
 </html>

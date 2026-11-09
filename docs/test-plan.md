@@ -27,13 +27,18 @@ that the validator does not mutate its input is not sufficient.
 ## Actual local HTTP and browser checks
 
 Use the README startup command. Submit both JSON examples and compare the planning
-result with a separate `/validate` call. The interview must remain unchanged and a
+result with a separate `/validate` call. Hotel check-in must remain unchanged and a
 manually overlapping flexible event must fail. An open port alone is not readiness.
 
 `scripts.smoke_browser` exercises desktop/mobile input, five-event output,
 revalidation, JSON export, the seven-step example log, source cards, unverified
 preparation suggestions, event add/remove, error display and safe rendering of
 user markup. It saves screenshots and the downloaded result to an ignored path.
+
+The planner browser check also covers `芝加哥`, the `Art Museum` sample alias, source
+explanations, completed sample-step labels and other-city switching. The live HTTP
+boundary is injected for that case; it asserts that untouched seed events are
+removed while user-edited reservations remain in the submitted payload.
 
 `python -m scripts.smoke_tools` checks the portable bundle and backend demo.
 Public API responses are injected: coordinates, raw opening tags, unknowns,

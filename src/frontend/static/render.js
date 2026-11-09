@@ -24,7 +24,7 @@ const rows = new Map();
 const records = new Map();
 let selectedStep = null;
 let following = true;
-const stepLabels = { completed: "Done", cached: "Cached", running: "In progress", example: "Example", failed: "Failed", stopped: "Stopped" };
+const stepLabels = { completed: "Done", cached: "Done · cached", running: "In progress", example: "Done · sample data", failed: "Failed", stopped: "Stopped" };
 
 // Review only changes the selected record. It never repeats a provider request.
 function updateStepViewer() {
@@ -71,7 +71,7 @@ export function resetResearch(mode) {
   $("research-panel").open = true;
   $("research-mode").textContent = mode === "demo" ? "Example walkthrough" : "Live source requests";
   $("research-disclaimer").textContent = mode === "demo"
-    ? "Offline example. No live websites are visited, and no LLM is connected."
+    ? "Offline sample. No live websites are visited. Steps marked Done · sample data are finished; they read bundled examples instead of querying maps."
     : "These are the backend's actual requests. Cached results and failed lookups are labeled.";
   $("research-count").textContent = "Starting";
   updateStepViewer();
@@ -98,7 +98,9 @@ export function renderStep(step) {
   const source = link(step.url, `${step.provider} · view source response`);
   if (source) body.append(source);
   row.replaceChildren(element("span", undefined, "step-dot"), body);
-  $("research-count").textContent = `${rows.size} steps`;
+  const finished = [...records.values()].filter((s) => ["completed", "cached", "example", "failed", "stopped"].includes(s.status)).length;
+  const failed = [...records.values()].filter((s) => s.status === "failed").length;
+  $("research-count").textContent = `${finished}/${rows.size} finished${failed ? ` · ${failed} failed` : ""}`;
   updateStepViewer();
 }
 
@@ -130,14 +132,14 @@ function renderSources(sources) {
   $("source-cards").replaceChildren();
   sources.forEach((source) => {
     const card = element("article", undefined, "source-card");
-    const label = source.data_mode === "demo" ? "Example hours" : source.hours_status === "usable" ? "Reported hours" : "Hours unverified";
+    const label = source.data_mode === "demo" ? "Sample hours · bundled" : source.hours_status === "usable" ? "Map-reported hours" : "Hours unverified";
     card.append(element("p", label, "eyebrow"), element("h4", source.name),
       element("p", source.opening_hours || "No usable opening-hour data was supplied."));
     const map = link(source.source_url, "View map record");
     const venue = link(source.website_url, "Venue website · not checked here");
     if (map) card.append(map);
     if (venue) card.append(venue);
-    if (source.data_mode === "demo") card.append(element("small", "Reference links were not fetched in this run."));
+    if (source.data_mode === "demo") card.append(element("small", "This place and its hours came from the app's sample list. Overpass and these reference links were not queried."));
     $("source-cards").append(card);
   });
 }
@@ -159,7 +161,14 @@ export function renderResult(result) {
   $("empty-state").hidden = true;
   $("result-content").hidden = false;
   $("trip-heading").textContent = `Your ${result.request.trip.destination} itinerary`;
-  $("result-mode").textContent = `${result.data_mode === "demo" ? "Example" : "Public map"} data / rule-based plan`;
+  $("result-mode").textContent = result.data_mode === "demo" ? "Sample places · automatically scheduled" : "Public map places · automatically scheduled";
+  const summary = result.planning_summary;
+  $("selection-summary").textContent = summary?.place_selection || "See the source records for where the candidate places came from.";
+  $("schedule-method").textContent = summary?.schedule_method || "Visits are fitted around your fixed reservations and checked independently.";
+  $("nearby-summary").textContent = summary?.nearby_search === "sample_not_queried"
+    ? "Nearby search was not called. The four Chicago places are sample suggestions."
+    : summary?.nearby_search === "failed" ? "Nearby search failed. This plan contains only your resolved requested places; extra nearby activities were not invented."
+    : summary?.search_center ? `Nearby search: within 3 km of ${summary.search_center.name}.` : "";
   $("trip-summary").textContent = `${result.request.trip.start_date} — ${result.request.trip.end_date} · ${result.request.trip.timezone}`;
   $("activity-count").textContent = result.request.trip.activities.length;
   $("fixed-count").textContent = result.request.original_fixed_events.length;
@@ -190,6 +199,8 @@ export function renderResult(result) {
     if (activity.fixed) name.append(element("span", "Fixed", "fixed-badge"));
     body.append(name, element("div", activity.location.name, "activity-place"));
     body.append(element("div", activity.estimated_cost === null ? "Cost unknown" : `Estimated $${Number(activity.estimated_cost).toFixed(2)}`, "activity-place"));
+    const explanation = summary?.candidate_activities?.find((c) => c.location_id === activity.location.id);
+    body.append(element("p", activity.fixed ? "Your fixed reservation: the supplied time and place are kept." : explanation?.reason || "Flexible visit fitted into an available time slot.", "activity-explanation"));
     card.append(body); $("schedule").append(card); previous = activity;
   });
   if (!result.request.trip.activities.length) $("schedule").append(element("p", "No activities could be scheduled."));

@@ -58,11 +58,18 @@ that environment when continuing here. Cloud tasks are isolated; use the existin
 checkout without creating a second Git worktree.
 
 The page loads the Chicago example. Click **Build & check my itinerary**. The result
-contains four flexible visits around a fixed interview. **Research log** stays open;
+contains four flexible visits around a fixed 15:00–15:30 hotel check-in. **Research log** stays open;
 use Previous/Next step or Follow latest to inspect the records. Open **Before you go** for unverified preparation
 suggestions. The download contains the schedule, original commitments, facts,
-research log and links. Demo hours, prices, meeting coordinates and travel times
+research log and links. Demo hours, prices, reservation coordinates and travel times
 are synthetic and visibly labeled; no site is contacted in this mode.
+
+The sample accepts `芝加哥` and `Art Museum`; that museum alias explicitly selects
+the Art Institute from the bundled examples. A different city switches the form
+to public data before submission. Untouched Chicago sample events are removed;
+user-added or edited fixed events are preserved. The result explains candidate
+origins, activity choices and the time-slot algorithm. See the
+[Chinese planner walkthrough](docs/planner-walkthrough.zh-CN.md).
 
 [Desktop screenshot](docs/screenshots/desktop.png) ·
 [Research log screenshot](docs/screenshots/research.png) ·
