@@ -1,8 +1,10 @@
 # Validation evidence
 
 This report describes the implementation now consolidated on `main`. The initial
-checks preceded its fast-forward merge; the tool-workbench checks were run on main. This report does
-not claim a public deployment or a verified remote GitHub Actions result.
+checks preceded its fast-forward merge; the tool-workbench checks were run on main.
+Public deployment evidence comes from the user's Render logs and online example
+output. Independent remote HTTP checks are blocked by the Codex egress policy.
+No verified remote GitHub Actions result is claimed.
 
 ## Executed checks
 
@@ -20,10 +22,15 @@ not claim a public deployment or a verified remote GitHub Actions result.
 | Tool workbench | Portable bundle and backend demo tested in Chromium: coordinates, opening tags, unknowns, directed times, JSON export, cache, failed live-mode handling and offline/mobile behavior; public responses were mocked |
 | Cloud startup preparation | Render YAML parsed; hash-locked Gunicorn installed; all prior dependency pins retained. The same Gunicorn factory/config passed local health, four-tool discovery, streamed five-activity planning, and both browser smoke flows on port 8001 |
 
-`render.yaml` selects a Free Python web service. Its local Gunicorn verification
-does not establish a Render deployment or public-service connectivity. Creating
-the service needs the account owner to sign in via the
-[cloud deployment guide](cloud-demo.zh-CN.md). No confirmed Render URL is available yet.
+`render.yaml` selects a Free Python web service. The user's 2026-11-09 Render log
+confirms `cf4c5b4` built, started Gunicorn on port 10000, passed `/api/health` with
+HTTP 200 and became live at https://itinerary-that-holds-up.onrender.com.
+The user also supplied the online five-activity demo result: the 10:00–11:00
+interview remained fixed, validation had zero violations/warnings, and seven
+example/local research steps were displayed. This confirms the hosted example
+flow, not live map retrieval. The independent public URL probe failed at the
+Codex proxy with `CONNECT tunnel failed, response 403`. See the
+[cloud deployment guide](cloud-demo.zh-CN.md) for the next live-data checks.
 
 The portable bundle's exact bytes were served over an intercepted local URL for
 browser testing. Managed Chromium blocked `file://` navigation; browser policy was

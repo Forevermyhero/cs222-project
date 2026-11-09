@@ -53,5 +53,17 @@ Gunicorn 服务的 210 秒超时覆盖应用 180 秒规划期限。Render 负责
 
 ## 验证状态
 
-部署配置已准备；本地运行结果记录在 `docs/validation-report.md`。
-尚未通过用户的 Render 账号创建远端服务，也没有已确认的公网服务地址或远端地图请求成功记录。
+2026-11-09，用户提供的 Render 部署日志确认提交 `cf4c5b4` 构建成功，Gunicorn 在内部端口
+10000 启动，`/api/health` 持续返回 200，并显示 `Your service is live`。
+
+- [在线工具台](https://itinerary-that-holds-up.onrender.com/tools)
+- [在线行程页面](https://itinerary-that-holds-up.onrender.com/)
+
+用户提供的在线页面结果还确认：Chicago 离线示例生成 5 个活动，原始面试保持在 10:00–11:00，
+验证为零违规、零警告，显示 7 条真实的本地处理/示例步骤。这证明云端示例交互已经运行。
+这些步骤并不代表访问了 7 个网站；20 分钟交通、费用和营业时间仍是合成示例。
+
+Codex 直接请求公开域名时，当前代理返回 `CONNECT tunnel failed, response 403`；
+该域名已加入环境配置草稿，但保存草稿不代表策略已应用。因此这里没有声称独立完成远端 HTTP
+检查或成功查询实时地图数据。下一步在在线 `/tools` 使用真实公开数据并核对结果/来源。
+本地执行证据见 `docs/validation-report.md`。

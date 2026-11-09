@@ -3,6 +3,11 @@
 A UIUC CS222 travel-planning prototype: enter a trip, keep fixed commitments in
 place, inspect the sources, and get a schedule with deterministic constraint checks.
 
+**Hosted app:** [Data tools](https://itinerary-that-holds-up.onrender.com/tools) ·
+[Itinerary planner](https://itinerary-that-holds-up.onrender.com/).
+Render startup and the online example flow are confirmed by user-provided logs/output.
+Successful live map-data retrieval is still being verified.
+
 **Current version uses no LLM or paid API.** The planner is a small Python
 scheduler. Public map-data adapters require no API key; Chicago example mode is
 entirely offline. Live requests, cache hits and failures are visible in the research
