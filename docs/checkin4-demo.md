@@ -6,7 +6,9 @@
 2. Run the README startup command from the repository root.
 3. Load the Chicago example. Point out the fixed interview, destination, dates and desired place.
 4. Click **Build & check my itinerary**. Show the unchanged interview and four flexible visits.
-5. Open **Research log**. Explain that the example is offline and every example fact is labeled.
+5. **Research log** opens above the results and stays open. Use **Previous step** / **Next step**,
+   or click a step title, to explain each recorded operation. **Follow latest** tracks new updates.
+   Reviewing a record does not repeat a lookup. Explain that the example is offline and labeled.
 6. Open **Before you go**. These are links and suggestions to verify, not confirmed ticket requirements.
 7. Download the JSON; it includes the authoritative fixed-event baseline and the research records.
 8. If live access is available, switch to public data and inspect actual source URLs/cache labels.

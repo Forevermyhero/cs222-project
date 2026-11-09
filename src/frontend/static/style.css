@@ -555,6 +555,60 @@ button:disabled {
   border-radius: 5px;
   margin-top: 18px;
 }
+#research-panel {
+  order: -1;
+  scroll-margin-top: 20px;
+}
+.step-review {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faef;
+}
+.step-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.step-controls button:disabled {
+  cursor: default;
+  opacity: .45;
+}
+#step-follow[aria-pressed="true"] {
+  background: var(--accent);
+}
+#step-position {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+#step-title {
+  margin: 17px 0 8px;
+}
+#step-meta {
+  line-height: 1.8;
+}
+#step-detail, #step-source {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.step-select {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: bold;
+  text-align: left;
+}
+.step-select:hover {
+  text-decoration: underline;
+}
+.selected-step .step-body {
+  border-left: 3px solid #849a65;
+  padding-left: 10px;
+}
 .research-context p {
   font-size: 10px;
   color: var(--muted);

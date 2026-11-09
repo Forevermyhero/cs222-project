@@ -1,14 +1,14 @@
 # Validation evidence
 
-This report describes the implementation now consolidated on `main`. Checks were
-run on the feature branch before its fast-forward merge. This report does
+This report describes the implementation now consolidated on `main`. The initial
+checks preceded its fast-forward merge; the tool-workbench checks were run on main. This report does
 not claim a public deployment or a verified remote GitHub Actions result.
 
 ## Executed checks
 
 | Check | Observed result |
 | --- | --- |
-| Reorganized offline suite | **132 passed**, no failed/skipped cases; statement coverage **97.83%** |
+| Current offline suite, including typed tools | **141 passed**, no failed/skipped cases; statement coverage **97.99%** |
 | Coverage gate | Required 90% reached |
 | Style | `python -m flake8 src tests scripts` passed |
 | Hash-locked installation | Dependencies were installed in a clean Python 3.12 environment; versions and checksum hashes were verified unchanged when the lock moved to the repository root |
@@ -17,6 +17,17 @@ not claim a public deployment or a verified remote GitHub Actions result.
 | Research interface | Seven honest example steps, source cards, preparation suggestions and query/reference distinctions |
 | Browser safety | User markup rendered as text; unsafe links rejected; no page JavaScript errors |
 | Stream behavior | A first progress event reaches the client while an injected slow lookup is still waiting; terminal success/errors are handled separately |
+| Tool workbench | Portable bundle and backend demo tested in Chromium: coordinates, opening tags, unknowns, directed times, JSON export, cache, failed live-mode handling and offline/mobile behavior; public responses were mocked |
+
+The portable bundle's exact bytes were served over an intercepted local URL for
+browser testing. Managed Chromium blocked `file://` navigation; browser policy was
+left intact. This verifies the bundled UI, not a successful live provider response
+or file navigation in this managed browser. The user's ordinary browser may open
+the downloaded HTML; public requests still depend on its network/CORS support.
+
+The itinerary research panel also remains open after completion and supports
+Previous/Next, direct step selection and Follow latest. Reviewing records does not
+repeat requests.
 
 The example contains synthetic hours, prices, meeting coordinates and travel times.
 It computes an actual schedule around the supplied commitment; it does not contact

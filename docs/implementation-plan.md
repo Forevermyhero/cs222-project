@@ -2,6 +2,9 @@
 
 ## Implemented
 
+- Independent typed map tools, `/tools` fact/evidence workbench and portable HTML/ZIP.
+  [Usage and remaining data gaps](tools-workbench.zh-CN.md).
+
 - Organized application code in `src/backend` and `src/frontend`, with separate tests.
 - Flask JSON routes, a progress-stream endpoint, and a responsive trip form.
 - Strict contracts and an independent validator with original fixed-event comparison.

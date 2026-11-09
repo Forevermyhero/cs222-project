@@ -49,7 +49,9 @@ src/
 6. [pipeline.py](../src/backend/app/services/pipeline.py) 组织地点查询、营业时间、排程和验证。
 7. [render.js](../src/frontend/static/render.js) 显示日程、查询记录、问题和准备事项。
 
-前端不直接调用地图供应商。网络查询集中在后端，便于控制超时、缓存、请求频率和证据记录。
+主行程页面和后端工具台的地图查询集中在后端，便于控制缓存、限流和证据记录。
+新增的[独立下载工具台](tools-workbench.zh-CN.md)是明确的例外：在用户浏览器中直接调用三个公开 API，
+不用运行后端；Nominatim 明确地址查询仍只在后端执行。
 
 ## 后端：入口与规则
 
@@ -77,7 +79,8 @@ src/
 | 文件 | 实际做什么 |
 | --- | --- |
 | [pipeline.py](../src/backend/app/services/pipeline.py) | 总协调器。`plan_trip()` 创建本次请求的查询日志；保留原始固定事件；收集地点和交通数据；生成营业窗口；调用排程器；最后调用验证器。返回完整结果、来源和准备事项。 |
-| [providers.py](../src/backend/app/services/providers.py) | 唯一的公开数据 HTTP 适配层。`city()` 调 Open-Meteo；`find_place()` 调 Nominatim；`attractions()` 调 Overpass；`travel_matrix()` 调 OSRM。负责超时、缓存、频率控制和请求/缓存/失败记录。不会让 LLM 猜测事实。 |
+| [providers.py](../src/backend/app/services/providers.py) | 后端的公开数据 HTTP 适配层。`city()` 调 Open-Meteo；`find_place()` 调 Nominatim；`attractions()` 调 Overpass；`travel_matrix()` 调 OSRM。负责缓存、限流和来源记录。 |
+| [toolbox.py](../src/backend/app/services/toolbox.py) | 独立于规划器的四个地图工具，提供输入 schema、调用分发和带来源的结构化事实；具体新增文件见[工具台导读](tools-workbench.zh-CN.md)。 |
 | [opening_hours.py](../src/backend/app/services/opening_hours.py) | 把支持的 OSM 营业时间表达式转换成具体日期的时间窗口，例如 `Mo-Fr 09:00-17:00`。支持有限语法；节假日、日出日落等无法解释时返回未知，不擅自补营业时间。它不自行访问网络。 |
 | [generation.py](../src/backend/app/services/generation.py) | 当前候选排程器。`heuristic_plan()` 在 09:00–18:00 内按 15 分钟步长寻找可安排的 60 分钟访问；`fits()` 检查插入后与相邻活动的重叠和交通间隔。安排不下的地点会被列出。这里目前没有 LLM 调用。 |
 | [research.py](../src/backend/app/services/research.py) | 定义 `ResearchLog`，整理实际查询步骤、地图记录链接和来源字段，并生成“出发前确认”建议。过滤危险链接。日志是公开工具活动，不是模型的隐藏思考过程。 |
@@ -106,6 +109,10 @@ src/
 | [style.css](../src/frontend/static/style.css) | 视觉样式与桌面/手机适配。控制配色、布局、卡片、字体和查询状态动画。没有外部字体、图片服务或构建框架依赖。 |
 
 ### Research log 中的状态怎么解释
+
+点击生成后，Research log 会在结果上方展开，实时显示后端传来的步骤，完成后仍保持展开。
+可以点击任一步骤标题，或用 **Previous step / Next step** 逐条查看说明、供应商、状态和查询地址。
+**Follow latest** 恢复跟随最新记录；回看记录不会再次发起请求，也不会把离线示例伪装成联网查询。
 
 - `running`：实际操作正在执行。
 - `completed`：该操作已完成；收到 API JSON 不等于访问了场馆官网。

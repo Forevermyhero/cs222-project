@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>旅行数据工具台 · Itinerary That Holds Up</title>
+  <link rel="stylesheet" href="/static/tools.css">
+  <script defer src="/static/tools.js"></script>
+</head>
+<body>
+  <header><a href="/" class="brand">i. <span>Itinerary That Holds Up</span></a><span>DATA BEFORE THE PLAN</span></header>
+  <main>
+    <div class="intro"><p class="eyebrow">先收集事实，再考虑规划</p><h1>看看一趟旅行，<em>需要查些什么。</em></h1><p>查询坐标、附近景点、地图营业时间和驾车时间。每一个结果都有来源；缺失的信息保留为未知。</p><div class="tags"><span>无需模型</span><span>无需 API key</span><span>逐步显示查询</span></div></div>
+    <p id="transport-note" class="notice"></p>
+    <p class="hint"><a href="https://github.com/Forevermyhero/cs222-project/raw/refs/heads/main/docs/travel-tools.zip">下载独立版 ZIP</a> · 解压后双击 travel-tools.html 即可打开，不需要 Python 或服务器。</p>
+    <div class="layout">
+      <aside class="panel">
+        <p class="eyebrow">01 / 给工具一些输入</p><h2>从一个城市开始</h2>
+        <form id="tools-form">
+          <label for="city">目的地城市</label><input id="city" value="Chicago" required maxlength="200">
+          <label for="mode">数据来源</label><select id="mode"><option value="live">真实公开数据</option><option value="demo">Chicago 离线示例 · 合成数据</option></select>
+          <label for="place">指定景点或固定事件地址（可选）</label><input id="place" maxlength="200" placeholder="例如 Art Institute of Chicago">
+          <p id="place-note" class="hint">Nominatim 解析一个明确地点；不做自动补全。</p>
+          <button id="run" class="primary">开始查询数据 →</button><button id="stop" type="button" hidden>停止</button>
+        </form>
+        <p id="status" role="status" aria-live="polite">等待输入。此页不会生成行程，也不会预订。</p>
+        <div class="divider"></div><p class="eyebrow">02 / 看两个地点如何衔接</p><h2>查一段交通时间</h2>
+        <label for="from">出发地点 A</label><select id="from" disabled></select><label for="to">到达地点 B</label><select id="to" disabled></select>
+        <button id="route" disabled>查询 A ↔ B 驾车时间</button><div id="route-result" aria-live="polite"></div>
+        <p class="hint">仅驾车估计，无实时路况。尚未接入步行、公交和道路距离。</p>
+        <div class="divider"></div><button id="export" disabled>下载本次查询 JSON</button>
+      </aside>
+      <div class="content">
+        <section class="panel"><div class="heading"><div><p class="eyebrow">实际调用 / 状态与来源</p><h2>工具正在做什么</h2></div><span id="log-count" class="badge">0 次调用</span></div><ol id="logs" aria-live="polite"></ol><p id="empty-log" class="hint">点击“开始查询数据”。执行中会立即显示正在调用的工具。</p></section>
+        <section class="panel" id="city-panel" hidden><p class="eyebrow">城市定位结果</p><h2 id="city-title"></h2><div id="city-facts"></div></section>
+        <section class="panel"><div class="heading"><div><p class="eyebrow">可供后续规划使用的事实</p><h2>地点与来源</h2></div><span id="place-count" class="badge">0 个地点</span></div><div id="places" class="place-grid"></div><p id="empty-places" class="hint">这里将显示坐标、营业时间原文、网站标签与地图链接。</p></section>
+        <section class="panel boundary"><h2>这些信息还需要下一步核实</h2><p>地图营业时间只有一个来源，尚未与官网交叉核对。网站链接只是地图中的标签，没有抓取网页内容。</p><div class="unknowns"><span>门票价格：未知</span><span>订票政策：未查询</span><span>酒店房态：未查询</span><span>步行 / 公交：未接入</span></div><p class="hint">Nominatim 和 Overpass 都使用 OpenStreetMap，不能算作两个独立来源。此页不把缺失价格当作免费，也不把地图营业时间当作官网确认。</p></section>
+      </div>
+    </div>
+    <footer>定位：Open-Meteo / GeoNames · 地点：© OpenStreetMap contributors (ODbL) · 驾车：OSRM / OpenStreetMap</footer>
+  </main>
+</body>
+</html>

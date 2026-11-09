@@ -1,7 +1,7 @@
 /* Page controller: read the form, start/stop requests, and call the display functions.
    Network parsing lives in api.js; drawing results lives in render.js. */
 import { requestJSON, streamPlan } from "./api.js";
-import { $, element, renderResult, renderValidation, renderStep, resetResearch, stopResearch } from "./render.js";
+import { $, element, renderResult, renderValidation, renderStep, resetResearch, stopResearch, reviewStep, followResearch } from "./render.js";
 
 let current = null;
 let eventCounter = 0;
@@ -88,6 +88,7 @@ $("trip-form").addEventListener("submit", async (event) => {
   const payload = formPayload();
   clearResult();
   resetResearch(payload.data_mode);
+  $("research-panel").scrollIntoView({ behavior: "smooth", block: "start" });
   $("empty-title").textContent = "Putting the pieces together.";
   $("empty-copy").textContent = "The research log shows the sources and checks behind this plan.";
   controller = new AbortController();
@@ -97,7 +98,6 @@ $("trip-form").addEventListener("submit", async (event) => {
     current = await streamPlan(payload, renderStep, controller.signal);
     renderResult(current);
     $("preparation-panel").hidden = false;
-    $("research-panel").open = false;
     showStatus("Your itinerary and constraint checks are ready.");
   } catch (error) {
     stopResearch();
@@ -110,6 +110,9 @@ $("trip-form").addEventListener("submit", async (event) => {
 $("load-example").addEventListener("click", loadExample);
 $("add-event").addEventListener("click", () => addEvent());
 $("data-mode").addEventListener("change", updateMode);
+$("step-previous").addEventListener("click", () => reviewStep(-1));
+$("step-next").addEventListener("click", () => reviewStep(1));
+$("step-follow").addEventListener("click", followResearch);
 $("cancel-plan").addEventListener("click", () => controller?.abort());
 $("revalidate").addEventListener("click", async () => {
   if (!current) return;

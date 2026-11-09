@@ -16,6 +16,7 @@ from .models import PlanRequest, ValidationRequest
 from .services.demo import example_request
 from .services.pipeline import plan_trip
 from .services.providers import ProviderError, PublicDataClient
+from .services.toolbox import catalog, execute_tool
 from .validator import validate_itinerary
 from .streaming import stream_plan
 
@@ -38,6 +39,18 @@ def create_app(config=None, data_client=None):
     def health():
         return jsonify(status="ok", data_modes=["demo", "live"],
                        planners=["heuristic"], llm_connected=False)
+
+    @app.get("/tools")
+    def tools_page():
+        return render_template("tools.html")
+
+    @app.get("/api/tools")
+    def tools_catalog():
+        return jsonify(tools=catalog(), llm_connected=False)
+
+    @app.post("/api/tools/<name>")
+    def call_tool(name):
+        return jsonify(execute_tool(name, request.get_json(), client))
 
     @app.get("/api/example")
     def example():

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta name="travel-tools-transport" content="browser">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>旅行数据工具台 · Itinerary That Holds Up</title>
+  <style>
+:root { --paper:#f6f4ec; --card:#fffef9; --ink:#203f34; --muted:#6c796d; --line:#dce0d3; --accent:#dce8b6; }
+* { box-sizing:border-box; }
+body { margin:0; color:var(--ink); background:var(--paper); font:14px/1.7 Arial,"Microsoft YaHei",sans-serif; }
+header,main { max-width:1380px; margin:auto; padding:0 5%; }
+header { min-height:84px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); gap:15px; }
+header>span,.eyebrow { color:var(--muted); font-size:10px; letter-spacing:1.5px; }
+.brand { font:italic 35px Georgia,serif; text-decoration:none; }
+.brand span { font:14px Arial,sans-serif; margin-left:10px; }
+.intro { padding:40px 0 22px; }
+h1 { font-size:clamp(28px,4vw,45px); line-height:1.4; letter-spacing:-1px; margin:10px 0; }
+h1 em { color:#7b8b58; font-style:normal; }
+.intro>p:not(.eyebrow) { color:var(--muted); }
+.tags,.unknowns { display:flex; flex-wrap:wrap; gap:8px; }
+.tags span,.unknowns span { padding:5px 11px; border:1px solid var(--line); border-radius:20px; font-size:11px; }
+.layout { display:grid; grid-template-columns:minmax(280px,.65fr) minmax(0,1.6fr); gap:22px; align-items:start; }
+.panel { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:25px; min-width:0; }
+.content { display:grid; gap:20px; min-width:0; }
+h2 { font-size:20px; margin:0 0 16px; font-weight:500; }
+h3 { font-size:15px; margin:0 0 13px; }
+.eyebrow { margin:0 0 9px; }
+label { display:block; font-size:12px; margin:17px 0 6px; }
+input,select,button { font:inherit; border:1px solid var(--line); border-radius:6px; padding:10px; color:var(--ink); background:white; }
+input,select { width:100%; min-width:0; }
+button { cursor:pointer; font-size:12px; margin-top:16px; }
+button:hover { background:#eef2e3; }
+button:disabled { opacity:.5; cursor:default; }
+.primary { width:100%; background:var(--ink); color:white; }
+.primary:hover { background:#315d4b; }
+.hint, #status { color:var(--muted); font-size:11px; }
+.notice { padding:13px 17px; background:#eaf0dc; border-left:3px solid #8c9f61; margin:0 0 22px; font-size:12px; }
+.divider { height:1px; background:var(--line); margin:25px 0; }
+.heading { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.badge { border:1px solid var(--line); border-radius:20px; padding:4px 9px; font-size:10px; white-space:nowrap; }
+#logs { padding:0; list-style:none; margin:5px 0 0; }
+.log { border-left:3px solid #8c9f61; padding:9px 13px; margin:12px 0; background:#f4f6eb; overflow-wrap:anywhere; }
+.log.running { border-color:#ce936a; }
+.log.failed { border-color:#a5553e; background:#f9eee8; }
+.log-top { display:flex; justify-content:space-between; gap:10px; font-size:12px; }
+.log p { font-size:11px; margin:5px 0; }
+.log details { margin-top:8px; font-size:11px; }
+pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; background:#edf0e6; padding:12px; border-radius:5px; font-size:10px; }
+a { color:var(--ink); overflow-wrap:anywhere; }
+.log a,.place-card a { display:block; font-size:11px; margin-top:7px; }
+.place-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+.place-card { border:1px solid var(--line); border-radius:8px; padding:16px; min-width:0; }
+dl { margin:8px 0; font-size:12px; }
+dt { color:var(--muted); font-size:10px; margin-top:10px; }
+dd { margin:2px 0; overflow-wrap:anywhere; }
+.route-card { padding:13px; background:#edf2df; margin-top:14px; border-radius:6px; font-size:12px; }
+.route-card strong { display:block; font-size:20px; }
+.boundary p { font-size:12px; }
+footer { color:var(--muted); font-size:10px; padding:30px 0; }
+[hidden] { display:none !important; }
+input:focus,select:focus,button:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid #8c9f61; outline-offset:3px; }
+@media(max-width:800px) { .layout { grid-template-columns:1fr; } header>span { display:none; } .intro { padding-top:25px; } }
+@media(max-width:450px) { .place-grid { grid-template-columns:1fr; } .panel { padding:19px; } .heading { align-items:start; } }
+
+</style>
+  
+</head>
+<body>
+  <header><a href="https://github.com/Forevermyhero/cs222-project" class="brand">i. <span>Itinerary That Holds Up</span></a><span>DATA BEFORE THE PLAN</span></header>
+  <main>
+    <div class="intro"><p class="eyebrow">先收集事实，再考虑规划</p><h1>看看一趟旅行，<em>需要查些什么。</em></h1><p>查询坐标、附近景点、地图营业时间和驾车时间。每一个结果都有来源；缺失的信息保留为未知。</p><div class="tags"><span>无需模型</span><span>无需 API key</span><span>逐步显示查询</span></div></div>
+    <p id="transport-note" class="notice"></p>
+    <p class="hint"><a href="https://github.com/Forevermyhero/cs222-project/raw/refs/heads/main/docs/travel-tools.zip">下载独立版 ZIP</a> · 解压后双击 travel-tools.html 即可打开，不需要 Python 或服务器。</p>
+    <div class="layout">
+      <aside class="panel">
+        <p class="eyebrow">01 / 给工具一些输入</p><h2>从一个城市开始</h2>
+        <form id="tools-form">
+          <label for="city">目的地城市</label><input id="city" value="Chicago" required maxlength="200">
+          <label for="mode">数据来源</label><select id="mode"><option value="live">真实公开数据</option><option value="demo">Chicago 离线示例 · 合成数据</option></select>
+          <label for="place">指定景点或固定事件地址（可选）</label><input id="place" maxlength="200" placeholder="例如 Art Institute of Chicago">
+          <p id="place-note" class="hint">Nominatim 解析一个明确地点；不做自动补全。</p>
+          <button id="run" class="primary">开始查询数据 →</button><button id="stop" type="button" hidden>停止</button>
+        </form>
+        <p id="status" role="status" aria-live="polite">等待输入。此页不会生成行程，也不会预订。</p>
+        <div class="divider"></div><p class="eyebrow">02 / 看两个地点如何衔接</p><h2>查一段交通时间</h2>
+        <label for="from">出发地点 A</label><select id="from" disabled></select><label for="to">到达地点 B</label><select id="to" disabled></select>
+        <button id="route" disabled>查询 A ↔ B 驾车时间</button><div id="route-result" aria-live="polite"></div>
+        <p class="hint">仅驾车估计，无实时路况。尚未接入步行、公交和道路距离。</p>
+        <div class="divider"></div><button id="export" disabled>下载本次查询 JSON</button>
+      </aside>
+      <div class="content">
+        <section class="panel"><div class="heading"><div><p class="eyebrow">实际调用 / 状态与来源</p><h2>工具正在做什么</h2></div><span id="log-count" class="badge">0 次调用</span></div><ol id="logs" aria-live="polite"></ol><p id="empty-log" class="hint">点击“开始查询数据”。执行中会立即显示正在调用的工具。</p></section>
+        <section class="panel" id="city-panel" hidden><p class="eyebrow">城市定位结果</p><h2 id="city-title"></h2><div id="city-facts"></div></section>
+        <section class="panel"><div class="heading"><div><p class="eyebrow">可供后续规划使用的事实</p><h2>地点与来源</h2></div><span id="place-count" class="badge">0 个地点</span></div><div id="places" class="place-grid"></div><p id="empty-places" class="hint">这里将显示坐标、营业时间原文、网站标签与地图链接。</p></section>
+        <section class="panel boundary"><h2>这些信息还需要下一步核实</h2><p>地图营业时间只有一个来源，尚未与官网交叉核对。网站链接只是地图中的标签，没有抓取网页内容。</p><div class="unknowns"><span>门票价格：未知</span><span>订票政策：未查询</span><span>酒店房态：未查询</span><span>步行 / 公交：未接入</span></div><p class="hint">Nominatim 和 Overpass 都使用 OpenStreetMap，不能算作两个独立来源。此页不把缺失价格当作免费，也不把地图营业时间当作官网确认。</p></section>
+      </div>
+    </div>
+    <footer>定位：Open-Meteo / GeoNames · 地点：© OpenStreetMap contributors (ODbL) · 驾车：OSRM / OpenStreetMap</footer>
+  </main>
+<script>
+/* Map-tool workbench. No model, scheduling, booking or arbitrary webpage fetching.
+   HTTP mode uses our typed backend tools. A downloaded file can query three public
+   CORS APIs directly from the user's browser; Nominatim stays backend-only so a
+   file:// page never sends anonymous requests without an application referrer. */
+"use strict";
+const $ = (id) => document.getElementById(id);
+const portable = location.protocol === "file:" || document.querySelector('meta[name="travel-tools-transport"]')?.content === "browser";
+const labels = { city: "城市坐标 / Open-Meteo", place: "指定地点 / Nominatim", attractions: "附近景点 / Overpass", routes: "驾车时间 / OSRM" };
+const state = { city: null, places: [], routes: null, records: [], mode: "live", controller: null };
+const cache = new Map();
+const demoRows = [
+  ["art", "Art Institute of Chicago", 41.8796, -87.6237, "Mo-Su 10:00-17:00", "https://www.artic.edu/visit"],
+  ["park", "Millennium Park", 41.8826, -87.6226, "Mo-Su 08:00-20:00", null],
+  ["river", "Chicago Riverwalk", 41.8882, -87.6262, "Mo-Su 08:00-20:00", null],
+  ["museum", "Field Museum", 41.8663, -87.6170, "Mo-Su 09:00-17:00", "https://www.fieldmuseum.org/visit"],
+];
+function node(tag, text, className) {
+  const item = document.createElement(tag);
+  if (text !== undefined) item.textContent = text;
+  if (className) item.className = className;
+  return item;
+}
+function safeAnchor(url, text) {
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) return null;
+    const a = node("a", text); a.href = parsed.href; a.target = "_blank"; a.rel = "noopener noreferrer";
+    return a;
+  } catch { return null; }
+}
+function facts(values) {
+  const list = node("dl");
+  for (const [key, value] of Object.entries(values)) list.append(node("dt", key), node("dd", value ?? "未知 / 数据未提供"));
+  return list;
+}
+function placeRecord(location, hours, website, sourceUrl = null) {
+  return { location, opening_hours_raw: hours ?? null, website: website ?? null, source_url: sourceUrl,
+    website_checked: false, cross_checked: false, ticket_price: null, hotel_availability: null };
+}
+function demoPlaces() {
+  return demoRows.map(([id, name, latitude, longitude, hours, website]) =>
+    placeRecord({ id: `demo:${id}`, name, latitude, longitude }, hours, website));
+}
+function showRecord(record) {
+  const row = record.row;
+  row.className = `log ${record.status}`;
+  const top = node("div", undefined, "log-top");
+  const status = { running: "正在查询", completed: "已收到数据", cached: "使用缓存", failed: "失败", example: "合成示例", stopped: "已停止等待" };
+  top.append(node("strong", labels[record.tool]), node("span", status[record.status]));
+  row.replaceChildren(top, node("p", record.detail));
+  for (const url of record.source_urls || []) {
+    const a = safeAnchor(url, url); if (a) row.append(a);
+  }
+  if (record.data !== null && record.data !== undefined) {
+    const detail = node("details");
+    detail.append(node("summary", "查看结构化返回数据"), node("pre", JSON.stringify(record.data, null, 2)));
+    row.append(detail);
+  }
+  $("log-count").textContent = `${state.records.length} 次调用`;
+}
+async function readJSON(url, options = {}) {
+  const control = new AbortController();
+  const outer = state.controller.signal;
+  const cancel = () => control.abort();
+  outer.addEventListener("abort", cancel, { once: true });
+  if (outer.aborted) control.abort();
+  const timeout = setTimeout(cancel, 25000);
+  try {
+    const response = await fetch(url, { ...options, signal: control.signal, credentials: "omit" });
+    const text = await response.text();
+    if (text.length > 3000000) throw new Error("响应过大，已拒绝处理。");
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error(`HTTP ${response.status}：服务没有返回有效 JSON。`); }
+    if (!response.ok) {
+      const error = new Error(data.error || `HTTP ${response.status}`);
+      error.research_steps = data.research_steps;
+      if (data.detail) error.message += ` ${JSON.stringify(data.detail)}`;
+      throw error;
+    }
+    return data;
+  } finally { clearTimeout(timeout); outer.removeEventListener("abort", cancel); }
+}
+async function publicJSON(record, url) {
+  record.source_urls = [url]; showRecord(record);
+  const entry = cache.get(url);
+  if (entry && Date.now() - entry.time < 900000) {
+    record.status = "cached";
+    return entry.data;
+  }
+  const data = await readJSON(url);
+  if (cache.size >= 100) cache.delete(cache.keys().next().value);
+  cache.set(url, { time: Date.now(), data });
+  return data;
+}
+function coordinates(point) {
+  return Number.isFinite(point.latitude) && Math.abs(point.latitude) <= 90 &&
+    Number.isFinite(point.longitude) && Math.abs(point.longitude) <= 180;
+}
+async function directTool(tool, input, record) {
+  if (tool === "city") {
+    const query = new URLSearchParams({ name: input.destination, count: "1", language: "en", format: "json" });
+    const data = await publicJSON(record, `https://geocoding-api.open-meteo.com/v1/search?${query}`);
+    const city = data.results?.[0];
+    if (!city) throw new Error("没有找到该城市。试试明确的英文城市名称。");
+    const point = { id: `city:${city.id}`, name: city.name, latitude: city.latitude, longitude: city.longitude };
+    if (!coordinates(point) || !city.timezone) throw new Error("城市数据缺少有效坐标或时区。");
+    new Intl.DateTimeFormat("en", { timeZone: city.timezone });
+    return { location: point, timezone: city.timezone };
+  }
+  if (tool === "attractions") {
+    if (!coordinates(input.center)) throw new Error("城市坐标无效。");
+    const { latitude, longitude } = input.center;
+    const query = `[out:json][timeout:15];nwr(around:3000,${latitude},${longitude})["tourism"~"^(museum|attraction|gallery)$"];out center 16;`;
+    const data = await publicJSON(record, `https://overpass-api.de/api/interpreter?${new URLSearchParams({ data: query })}`);
+    if (!Array.isArray(data.elements)) throw new Error("Overpass 返回的数据结构无效。");
+    return data.elements.flatMap((item) => {
+      const tags = item.tags || {}, point = item.lat === undefined ? item.center : item;
+      const loc = { id: `osm:${item.type}:${item.id}`, name: tags.name, latitude: point?.lat, longitude: point?.lon };
+      if (!loc.name || !coordinates(loc) || !["node", "way", "relation"].includes(item.type) || !Number.isSafeInteger(item.id)) return [];
+      return [placeRecord(loc, tags.opening_hours, tags.website || tags["contact:website"], `https://www.openstreetmap.org/${item.type}/${item.id}`)];
+    }).sort((a, b) => a.location.name.localeCompare(b.location.name, "en")).slice(0, 6);
+  }
+  if (tool === "routes") {
+    if (input.locations.some((p) => !coordinates(p))) throw new Error("路线地点缺少坐标。");
+    const coords = input.locations.map((p) => `${p.longitude},${p.latitude}`).join(";");
+    const data = await publicJSON(record, `https://router.project-osrm.org/table/v1/driving/${coords}?annotations=duration`);
+    if (data.code !== "Ok" || !Array.isArray(data.durations) || data.durations.length !== input.locations.length) throw new Error("OSRM 没有返回有效时间矩阵。");
+    const times = [];
+    data.durations.forEach((row, i) => {
+      if (!Array.isArray(row) || row.length !== input.locations.length) throw new Error("OSRM 矩阵行无效。");
+      row.forEach((seconds, j) => {
+        if (i === j || seconds === null) return;
+        if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) throw new Error("OSRM 时间值无效。");
+        times.push({ from_location_id: input.locations[i].id, to_location_id: input.locations[j].id, minutes: Math.ceil(seconds / 60) });
+      });
+    });
+    return { mode: "driving", live_traffic: false, travel_times: times, distance_meters: null };
+  }
+  throw new Error("下载版不调用 Nominatim。请在后端网页使用明确地址查询。");
+}
+async function callTool(tool, input) {
+  const record = { tool, input, status: "running", detail: "正在请求数据，尚未确认结果。", data: null,
+    data_mode: state.mode, requested_at: new Date().toISOString(), source_urls: [], row: node("li") };
+  state.records.push(record); $("logs").append(record.row); $("empty-log").hidden = true; showRecord(record);
+  try {
+    let data;
+    if (state.mode === "demo") {
+      if (tool === "city") data = { location: { id: "demo:city", name: "Chicago", latitude: 41.881, longitude: -87.629 }, timezone: "America/Chicago" };
+      if (tool === "attractions") data = demoPlaces();
+      if (tool === "place") {
+        data = demoPlaces().find((p) => p.location.name.toLowerCase().includes(input.name.toLowerCase()));
+        if (!data) throw new Error("离线示例不包含该地点；不会伪造地点数据。");
+      }
+      if (tool === "routes") data = { mode: "driving", live_traffic: false, distance_meters: null, travel_times:
+        input.locations.flatMap((a) => input.locations.filter((b) => a.id !== b.id).map((b) => ({ from_location_id: a.id, to_location_id: b.id, minutes: 20 }))) };
+      record.status = "example";
+      record.detail = "读取合成示例，没有访问任何外部服务。坐标、营业时间和交通估计不代表最新事实。";
+    } else if (portable) {
+      data = await directTool(tool, input, record);
+      if (record.status !== "cached") record.status = "completed";
+      record.detail = record.status === "cached" ? "使用本页 15 分钟内的缓存，本次未重新查询。" : "浏览器收到公开 API 的 JSON；未访问景点官网。";
+    } else {
+      const response = await readJSON(`/api/tools/${tool}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+      data = response.data;
+      record.research_steps = response.research_steps;
+      record.source_urls = [...new Set(response.research_steps.map((s) => s.url).filter(Boolean))];
+      record.status = response.research_steps.some((s) => s.status === "cached") ? "cached" : "completed";
+      record.detail = record.status === "cached" ? "后端使用了缓存，查看来源记录可核对。" : "后端返回已整理的公开地图数据；未访问景点官网。";
+    }
+    record.data = data; showRecord(record); $("export").disabled = false; return data;
+  } catch (error) {
+    record.status = state.controller.signal.aborted ? "stopped" : "failed";
+    record.detail = error.name === "AbortError" ? "请求超时或已停止等待，结果未确认。" : error.message;
+    if (portable && error instanceof TypeError) record.detail += " 请检查网络或该服务的跨域访问限制；未替换成示例数据。";
+    record.research_steps = error.research_steps || [];
+    if (record.research_steps.length) record.source_urls = record.research_steps.map((s) => s.url).filter(Boolean);
+    showRecord(record); $("export").disabled = false; throw error;
+  }
+}
+function renderCity() {
+  $("city-panel").hidden = false; $("city-title").textContent = state.city.location.name;
+  const p = state.city.location;
+  $("city-facts").replaceChildren(facts({ 纬度: p.latitude, 经度: p.longitude, 当地时区: state.city.timezone,
+    数据来源: state.mode === "demo" ? "合成示例，未联网" : "Open-Meteo / GeoNames；当前采用第一个匹配结果" }));
+}
+function renderPlaces() {
+  $("places").replaceChildren();
+  for (const p of state.places) {
+    const card = node("article", undefined, "place-card");
+    card.append(node("h3", p.location.name), facts({ 地点标识: p.location.id, 纬度: p.location.latitude, 经度: p.location.longitude,
+      营业时间原文: p.opening_hours_raw, 核实状态: state.mode === "demo" ? "合成示例，未联网" : "仅地图来源，尚未与官网交叉核对", 门票价格: null }));
+    const mapURL = p.source_url || `https://www.openstreetmap.org/?mlat=${p.location.latitude}&mlon=${p.location.longitude}#map=16/${p.location.latitude}/${p.location.longitude}`;
+    const map = safeAnchor(mapURL, "在地图中查看坐标 / 记录"); if (map) card.append(map);
+    const site = safeAnchor(p.website, "地图中的网站标签 · 尚未抓取核实");
+    if (site) card.append(site); else card.append(node("p", "没有可用的网站标签", "hint"));
+    $("places").append(card);
+  }
+  $("place-count").textContent = `${state.places.length} 个地点`;
+  $("empty-places").hidden = state.places.length > 0;
+  for (const id of ["from", "to"]) $(id).replaceChildren(...state.places.map((p) => { const o = node("option", p.location.name); o.value = p.location.id; return o; }));
+  if (state.places.length > 1) $("to").selectedIndex = 1;
+}
+async function queryRoute() {
+  state.routes = null;
+  $("route-result").replaceChildren();
+  const a = state.places.find((p) => p.location.id === $("from").value);
+  const b = state.places.find((p) => p.location.id === $("to").value);
+  if (!a || !b || a.location.id === b.location.id) throw new Error("请选择两个不同地点。");
+  const data = await callTool("routes", { locations: [a.location, b.location] }); state.routes = data;
+  for (const [source, target] of [[a, b], [b, a]]) {
+    const t = data.travel_times.find((t) => t.from_location_id === source.location.id && t.to_location_id === target.location.id);
+    const card = node("div", undefined, "route-card");
+    card.append(node("span", `${source.location.name} → ${target.location.name}`), node("strong", t ? `${t.minutes} 分钟` : "路线时间未知"),
+      node("small", state.mode === "demo" ? "合成的 20 分钟示例" : "OSRM 驾车估计 · 不含实时路况"));
+    $("route-result").append(card);
+  }
+}
+function updateMode() {
+  $("place").disabled = portable && $("mode").value === "live";
+  $("place-note").textContent = portable && $("mode").value === "live"
+    ? "下载版从附近景点中选择地点。明确地址解析保留在后端，以满足 Nominatim 的应用标识和限流要求。"
+    : "Nominatim 解析一个明确地点；不做自动补全。离线示例仅支持四个示例景点。";
+}
+function busy(value) {
+  for (const id of ["city", "mode", "place", "run", "from", "to", "route"]) $(id).disabled = value;
+  $("stop").hidden = !value;
+  if (!value) {
+    updateMode();
+    for (const id of ["from", "to", "route"]) $(id).disabled = state.places.length < 2;
+  }
+}
+$("tools-form").addEventListener("submit", async (event) => {
+  event.preventDefault(); state.controller = new AbortController(); state.mode = $("mode").value;
+  state.city = null; state.places = []; state.routes = null; state.records = [];
+  $("logs").replaceChildren(); $("route-result").replaceChildren(); $("city-panel").hidden = true;
+  $("log-count").textContent = "0 次调用"; $("export").disabled = true; renderPlaces();
+  const destination = $("city").value.trim(), name = $("place").disabled ? "" : $("place").value.trim();
+  busy(true); $("status").textContent = "正在定位城市，然后查询附近景点…";
+  try {
+    if (state.mode === "demo" && destination.toLowerCase() !== "chicago") throw new Error("离线示例仅包含 Chicago。其他城市请选择真实公开数据。");
+    state.city = await callTool("city", { destination }); renderCity();
+    if (name) { state.places.push(await callTool("place", { destination, name })); renderPlaces(); }
+    const nearby = await callTool("attractions", { center: state.city.location });
+    state.places = [...new Map([...state.places, ...nearby].map((p) => [p.location.id, p])).values()].slice(0, 8); renderPlaces();
+    if (state.places.length >= 2) {
+      $("status").textContent = "地点数据已返回，正在查询前两个地点的驾车时间…";
+      await queryRoute();
+    }
+    $("status").textContent = state.places.length ? "查询完成。可切换 A/B 再查交通，或展开每次调用的结构化数据。" : "城市定位成功，但附近未找到可用景点；未补造地点。";
+  } catch (error) { $("status").textContent = `查询未完成：${error.message} 已取得的数据和失败记录会保留。`; }
+  finally { busy(false); state.controller = null; }
+});
+$("route").addEventListener("click", async () => {
+  state.controller = new AbortController(); busy(true);
+  try { await queryRoute(); $("status").textContent = "路线查询完成；两个方向分别显示。"; }
+  catch (error) { $("status").textContent = error.message; }
+  finally { busy(false); state.controller = null; }
+});
+$("mode").addEventListener("change", updateMode);
+$("stop").addEventListener("click", () => state.controller?.abort());
+$("export").addEventListener("click", () => {
+  const data = { data_mode: state.mode, transport: portable ? "portable_browser" : "backend", city: state.city, places: state.places, routes: state.routes,
+    records: state.records.map(({ row, ...record }) => record), llm_connected: false, cross_checked: false };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  const a = node("a"); a.href = url; a.download = "travel-tool-evidence.json"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+$("transport-note").textContent = portable
+  ? "下载独立版：无需启动服务器。真实模式由你的浏览器查询 Open-Meteo、Overpass 和 OSRM；网络或跨域失败会明确显示。Nominatim 明确地址查询需要后端版。离线示例随时可用。"
+  : "后端版：使用四个带输入校验的独立工具接口。公开服务失败会显示原因，不会自动替换为示例。也可下载独立版，在自己的浏览器中使用三个公开数据工具。";
+updateMode();
+
+</script>
+</body>
+</html>

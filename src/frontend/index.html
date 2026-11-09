@@ -12,7 +12,7 @@
   <!-- This file defines the page structure; behavior and styling are separate files. -->
   <header class="site-header">
     <a class="brand" href="/" aria-label="Itinerary That Holds Up home"><span class="brand-mark">i.</span><span>Itinerary<br><small>THAT HOLDS UP</small></span></a>
-    <nav aria-label="Main navigation"><a href="#trip-form">Plan a trip</a><span class="pilot-label">CS222 prototype</span></nav>
+    <nav aria-label="Main navigation"><a href="/tools">Data tools</a><a href="#trip-form">Plan a trip</a><span class="pilot-label">CS222 prototype</span></nav>
   </header>
   <main>
     <section class="intro">
@@ -75,6 +75,11 @@
         <details id="research-panel" class="panel research-panel" hidden>
           <summary><span><span class="eyebrow">02 / Behind the plan</span><strong>Research log</strong></span><span id="research-count" class="pill">Starting</span></summary>
           <div class="research-context"><span id="research-mode" class="eyebrow"></span><p id="research-disclaimer"></p></div>
+          <div class="step-review" aria-label="Research step viewer">
+            <div class="step-controls"><button id="step-previous" type="button" class="secondary" disabled>Previous step</button><span id="step-position">0 / 0</span><button id="step-next" type="button" class="secondary" disabled>Next step</button><button id="step-follow" type="button" class="secondary" aria-pressed="true">Follow latest</button></div>
+            <p class="hint">Follow updates as they arrive, or select a recorded step to review it. Reviewing a step does not run the query again.</p>
+            <h3 id="step-title">Waiting for the first step</h3><p id="step-meta" class="eyebrow"></p><p id="step-detail"></p><div id="step-source"></div>
+          </div>
           <ol id="research-steps" class="research-steps" aria-live="polite"></ol><div id="source-cards" class="source-cards"></div>
         </details>
         <details class="panel preparation-panel" id="preparation-panel" hidden open>

@@ -1,0 +1,56 @@
+:root { --paper:#f6f4ec; --card:#fffef9; --ink:#203f34; --muted:#6c796d; --line:#dce0d3; --accent:#dce8b6; }
+* { box-sizing:border-box; }
+body { margin:0; color:var(--ink); background:var(--paper); font:14px/1.7 Arial,"Microsoft YaHei",sans-serif; }
+header,main { max-width:1380px; margin:auto; padding:0 5%; }
+header { min-height:84px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); gap:15px; }
+header>span,.eyebrow { color:var(--muted); font-size:10px; letter-spacing:1.5px; }
+.brand { font:italic 35px Georgia,serif; text-decoration:none; }
+.brand span { font:14px Arial,sans-serif; margin-left:10px; }
+.intro { padding:40px 0 22px; }
+h1 { font-size:clamp(28px,4vw,45px); line-height:1.4; letter-spacing:-1px; margin:10px 0; }
+h1 em { color:#7b8b58; font-style:normal; }
+.intro>p:not(.eyebrow) { color:var(--muted); }
+.tags,.unknowns { display:flex; flex-wrap:wrap; gap:8px; }
+.tags span,.unknowns span { padding:5px 11px; border:1px solid var(--line); border-radius:20px; font-size:11px; }
+.layout { display:grid; grid-template-columns:minmax(280px,.65fr) minmax(0,1.6fr); gap:22px; align-items:start; }
+.panel { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:25px; min-width:0; }
+.content { display:grid; gap:20px; min-width:0; }
+h2 { font-size:20px; margin:0 0 16px; font-weight:500; }
+h3 { font-size:15px; margin:0 0 13px; }
+.eyebrow { margin:0 0 9px; }
+label { display:block; font-size:12px; margin:17px 0 6px; }
+input,select,button { font:inherit; border:1px solid var(--line); border-radius:6px; padding:10px; color:var(--ink); background:white; }
+input,select { width:100%; min-width:0; }
+button { cursor:pointer; font-size:12px; margin-top:16px; }
+button:hover { background:#eef2e3; }
+button:disabled { opacity:.5; cursor:default; }
+.primary { width:100%; background:var(--ink); color:white; }
+.primary:hover { background:#315d4b; }
+.hint, #status { color:var(--muted); font-size:11px; }
+.notice { padding:13px 17px; background:#eaf0dc; border-left:3px solid #8c9f61; margin:0 0 22px; font-size:12px; }
+.divider { height:1px; background:var(--line); margin:25px 0; }
+.heading { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.badge { border:1px solid var(--line); border-radius:20px; padding:4px 9px; font-size:10px; white-space:nowrap; }
+#logs { padding:0; list-style:none; margin:5px 0 0; }
+.log { border-left:3px solid #8c9f61; padding:9px 13px; margin:12px 0; background:#f4f6eb; overflow-wrap:anywhere; }
+.log.running { border-color:#ce936a; }
+.log.failed { border-color:#a5553e; background:#f9eee8; }
+.log-top { display:flex; justify-content:space-between; gap:10px; font-size:12px; }
+.log p { font-size:11px; margin:5px 0; }
+.log details { margin-top:8px; font-size:11px; }
+pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; background:#edf0e6; padding:12px; border-radius:5px; font-size:10px; }
+a { color:var(--ink); overflow-wrap:anywhere; }
+.log a,.place-card a { display:block; font-size:11px; margin-top:7px; }
+.place-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+.place-card { border:1px solid var(--line); border-radius:8px; padding:16px; min-width:0; }
+dl { margin:8px 0; font-size:12px; }
+dt { color:var(--muted); font-size:10px; margin-top:10px; }
+dd { margin:2px 0; overflow-wrap:anywhere; }
+.route-card { padding:13px; background:#edf2df; margin-top:14px; border-radius:6px; font-size:12px; }
+.route-card strong { display:block; font-size:20px; }
+.boundary p { font-size:12px; }
+footer { color:var(--muted); font-size:10px; padding:30px 0; }
+[hidden] { display:none !important; }
+input:focus,select:focus,button:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid #8c9f61; outline-offset:3px; }
+@media(max-width:800px) { .layout { grid-template-columns:1fr; } header>span { display:none; } .intro { padding-top:25px; } }
+@media(max-width:450px) { .place-grid { grid-template-columns:1fr; } .panel { padding:19px; } .heading { align-items:start; } }

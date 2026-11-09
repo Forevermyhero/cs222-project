@@ -22,9 +22,49 @@ function link(url, label) {
 
 const rows = new Map();
 const records = new Map();
+let selectedStep = null;
+let following = true;
+const stepLabels = { completed: "Done", cached: "Cached", running: "In progress", example: "Example", failed: "Failed", stopped: "Stopped" };
+
+// Review only changes the selected record. It never repeats a provider request.
+function updateStepViewer() {
+  const ids = [...records.keys()];
+  if (following) selectedStep = ids.at(-1) || null;
+  const index = ids.indexOf(selectedStep);
+  const step = records.get(selectedStep);
+  $("step-position").textContent = `${index + 1} / ${ids.length}`;
+  $("step-previous").disabled = index <= 0;
+  $("step-next").disabled = index < 0 || index === ids.length - 1;
+  $("step-follow").setAttribute("aria-pressed", String(following));
+  $("step-title").textContent = step?.title || "Waiting for the first step";
+  $("step-meta").textContent = step ? `${step.provider} · ${stepLabels[step.status] || step.status} · ${step.network_request ? "Network request" : step.status === "cached" ? "Cached response" : "Local step"}` : "";
+  $("step-detail").textContent = step?.detail || "";
+  $("step-source").replaceChildren();
+  const source = link(step?.url, step?.url);
+  if (source) $("step-source").append(source);
+  for (const [id, row] of rows) {
+    row.classList.toggle("selected-step", id === selectedStep);
+    row.querySelector("button").setAttribute("aria-current", id === selectedStep ? "step" : "false");
+  }
+}
+
+export function reviewStep(direction) {
+  const ids = [...records.keys()];
+  const index = ids.indexOf(selectedStep);
+  if (index < 0) return;
+  following = false;
+  selectedStep = ids[Math.max(0, Math.min(ids.length - 1, index + direction))];
+  updateStepViewer();
+}
+
+export function followResearch() {
+  following = true;
+  updateStepViewer();
+}
 
 export function resetResearch(mode) {
   rows.clear(); records.clear();
+  selectedStep = null; following = true;
   $("research-steps").replaceChildren();
   $("source-cards").replaceChildren();
   $("research-panel").hidden = false;
@@ -34,6 +74,7 @@ export function resetResearch(mode) {
     ? "Offline example. No live websites are visited, and no LLM is connected."
     : "These are the backend's actual requests. Cached results and failed lookups are labeled.";
   $("research-count").textContent = "Starting";
+  updateStepViewer();
 }
 
 export function renderStep(step) {
@@ -47,13 +88,18 @@ export function renderStep(step) {
   row.className = `research-step step-${step.status}`;
   const body = element("div", undefined, "step-body");
   const top = element("div", undefined, "step-heading");
-  const status = { completed: "Done", cached: "Cached", running: "In progress", example: "Example", failed: "Failed", stopped: "Stopped" };
-  top.append(element("strong", step.title), element("span", status[step.status] || step.status, "step-status"));
+  const select = element("button", step.title, "step-select");
+  select.type = "button";
+  select.addEventListener("click", () => {
+    selectedStep = step.id; following = false; updateStepViewer();
+  });
+  top.append(select, element("span", stepLabels[step.status] || step.status, "step-status"));
   body.append(top, element("p", step.detail));
   const source = link(step.url, `${step.provider} · view source response`);
   if (source) body.append(source);
   row.replaceChildren(element("span", undefined, "step-dot"), body);
   $("research-count").textContent = `${rows.size} steps`;
+  updateStepViewer();
 }
 
 export function stopResearch() {

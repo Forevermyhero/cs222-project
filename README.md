@@ -53,8 +53,8 @@ that environment when continuing here. Cloud tasks are isolated; use the existin
 checkout without creating a second Git worktree.
 
 The page loads the Chicago example. Click **Build & check my itinerary**. The result
-contains four flexible visits around a fixed interview. Open **Research log** to
-see the steps and source records, and **Before you go** for unverified preparation
+contains four flexible visits around a fixed interview. **Research log** stays open;
+use Previous/Next step or Follow latest to inspect the records. Open **Before you go** for unverified preparation
 suggestions. The download contains the schedule, original commitments, facts,
 research log and links. Demo hours, prices, meeting coordinates and travel times
 are synthetic and visibly labeled; no site is contacted in this mode.
@@ -62,6 +62,26 @@ are synthetic and visibly labeled; no site is contacted in this mode.
 [Desktop screenshot](docs/screenshots/desktop.png) ·
 [Research log screenshot](docs/screenshots/research.png) ·
 [Mobile screenshot](docs/screenshots/mobile.png)
+
+## Inspect the data tools without planning
+
+Open `/tools` for the Chinese workbench: enter a city, optionally resolve one named
+place, inspect nearby coordinates/OSM opening tags/website tags, and select A/B to
+query directed driving estimates. Expand each operation to see structured data or
+download its evidence JSON. This does not invoke a model or generate a schedule.
+[Workbench screenshot using synthetic demo data](docs/screenshots/tools.png).
+
+If this cloud's local server cannot be opened in your client, download
+[travel-tools.zip](https://github.com/Forevermyhero/cs222-project/raw/refs/heads/main/docs/travel-tools.zip),
+extract it, and open `travel-tools.html`. No Python or server is needed. The portable
+page queries Open-Meteo, Overpass and OSRM from your browser; actual access depends
+on your network and the providers' CORS policies. Nominatim address lookup remains
+backend-only to preserve application identification/rate limiting. The explicit
+Chicago demo works offline. A failed live request never becomes demo data.
+
+Ticket prices, hotel inventory, walking/transit, venue-page scraping and independent
+opening-hour cross-checks are **not implemented**. See [tool contracts and usage](docs/tools-workbench.zh-CN.md).
+Regenerate the portable HTML/ZIP after editing its source with `python -m scripts.export_tools`.
 
 ## Free public-data mode
 

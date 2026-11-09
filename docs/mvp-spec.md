@@ -1,5 +1,10 @@
 # Implemented MVP contract
 
+The independent data-tool workbench is implemented at `/tools`, with typed
+`POST /api/tools/{city,place,attractions,routes}` endpoints and `GET /api/tools`
+schemas. See [tool contracts and the portable browser version](tools-workbench.zh-CN.md).
+It collects facts without invoking the candidate planner.
+
 ## Scope and request rules
 
 The backend is Flask/Pydantic 2. Requests reject unknown fields and blank identifiers.

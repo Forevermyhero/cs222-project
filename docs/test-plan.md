@@ -19,6 +19,7 @@ results are controlled. No key, live service, database or running server is requ
 | `tests/test_services.py` | Injected public responses, cache/throttle, malformed data, opening parser, scheduling and timezone/date-line handling |
 | `tests/test_api.py` | Flask HTML/assets, JSON contracts, 200 semantic results, 422 input errors, 400/413/415 errors and explicit provider failures |
 | `tests/test_research.py` | Honest demo/live/cache provenance, safe links, no booking claims, streamed progress before lookup completion, errors and bounded capacity |
+| `tests/test_toolbox.py` | Independent typed tools, coordinates, raw tags, unknown prices, directed routes, invalid inputs and failure evidence |
 
 The original fixed events must be compared with generated candidates. Merely proving
 that the validator does not mutate its input is not sufficient.
@@ -33,6 +34,13 @@ manually overlapping flexible event must fail. An open port alone is not readine
 revalidation, JSON export, the seven-step example log, source cards, unverified
 preparation suggestions, event add/remove, error display and safe rendering of
 user markup. It saves screenshots and the downloaded result to an ignored path.
+
+`python -m scripts.smoke_tools` checks the portable bundle and backend demo.
+Public API responses are injected: coordinates, raw opening tags, unknowns,
+directional rounding, source URLs, cached routes, JSON export, offline/mobile
+operation and explicit failures. It does not prove live provider availability.
+Managed Chromium blocks file navigation, so the unchanged portable HTML bytes
+are served at an intercepted local URL; browser policy is not modified.
 
 ## External checks
 

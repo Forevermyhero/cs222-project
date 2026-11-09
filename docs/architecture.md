@@ -38,6 +38,7 @@ redefine which commitments must stay fixed.
 | `streaming.py` | Bounded worker/queue; newline-delimited public events to the browser |
 | `services/pipeline.py` | Coordinate the entire planning operation |
 | `services/providers.py` | Named no-key HTTP adapters, shared cache/rate limits |
+| `services/toolbox.py` | Typed, independently callable map tools and schemas; no scheduling |
 | `services/opening_hours.py` | Translate a supported subset of OSM tags to aware windows |
 | `services/generation.py` | Greedy scheduling of known places around original commitments |
 | `services/research.py` | Request-local public log, safe source URLs and unverified preparation items |
@@ -47,6 +48,13 @@ redefine which commitments must stay fixed.
 | `src/frontend/static/render.js` | Safe DOM rendering; no provider calls |
 
 See [the Chinese file-by-file tour](code-tour.zh-CN.md) for the complete inventory.
+
+The `/tools` workbench exposes these facts without running the planner, through
+`GET /api/tools` and four `POST /api/tools/{city,place,attractions,routes}` calls.
+Its downloadable HTML bundle is an explicit alternative transport: the user's
+browser calls Open-Meteo, Overpass and OSRM directly, subject to CORS/network access.
+It never calls Nominatim from a file origin. Main itinerary planning continues to
+use the backend adapters. See [tool contracts](tools-workbench.zh-CN.md).
 
 ## Source evidence
 
