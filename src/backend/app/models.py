@@ -47,6 +47,7 @@ class Model(BaseModel):
 
 
 class Location(Model):
+    """Stable place identity, with optional coordinates for external routing."""
     id: Text
     name: Text
     latitude: float | None = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
@@ -60,6 +61,7 @@ class Location(Model):
 
 
 class Activity(Model):
+    """One candidate or original fixed event; invalid durations are reported by rules."""
     id: Text
     name: Text
     location: Location
@@ -71,6 +73,7 @@ class Activity(Model):
 
 
 class Trip(Model):
+    """A candidate itinerary and the calendar/timezone in which it must fit."""
     destination: Text
     start_date: ISODate
     end_date: ISODate
@@ -117,6 +120,7 @@ class OpeningHours(Model):
 
 
 class ValidationRequest(Model):
+    """Candidate plus separate original commitments and externally supplied facts."""
     trip: Trip
     # A separate authoritative baseline is required, including [] when there are no fixed events.
     original_fixed_events: list[Activity] = Field(max_length=30)
@@ -190,6 +194,7 @@ class FixedEventInput(Model):
 
 
 class PlanRequest(Model):
+    """The trip form contract. This prototype deliberately has no LLM option."""
     destination: Text
     start_date: ISODate
     end_date: ISODate
@@ -199,7 +204,7 @@ class PlanRequest(Model):
     fixed_events: list[FixedEventInput] = Field(default_factory=list, max_length=10)
     budget: Money | None = None
     data_mode: Literal["demo", "live"] = "demo"
-    planner: Literal["heuristic", "openai"] = "heuristic"
+    planner: Literal["heuristic"] = "heuristic"
 
     @model_validator(mode="after")
     def coherent(self) -> Self:

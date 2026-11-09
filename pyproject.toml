@@ -1,9 +1,9 @@
 [tool.pytest.ini_options]
-testpaths = ["backend/tests"]
+testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 
 [tool.coverage.run]
-source = ["backend/app"]
+source = ["src/backend/app"]
 
 [tool.coverage.report]
 show_missing = true

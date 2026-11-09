@@ -1,100 +1,88 @@
 # Architecture
 
-## Implemented workflow
+## Current workflow
 
-The Flask application serves a small JavaScript frontend and JSON endpoints. The
-rule-based planner and synthetic data make the entire application usable offline.
-Live map services and optional OpenAI generation are separate, explicit selections.
+The prototype has a Flask backend and a plain HTML/CSS/JavaScript frontend. All
+application code lives under `src/`; tests and operational scripts are separate.
+There is no active LLM integration or paid-service call.
 
 ```mermaid
 flowchart TD
-    User[Trip form] --> API[Flask /api/plan]
-    API --> Input[Pydantic request parsing]
-    Input --> Baseline[Retain original fixed events]
-    Baseline --> Data[Demo facts or public-data adapters]
-    Data --> Planner[Heuristic planner or optional OpenAI]
-    Planner --> Validator[Pure Python validation]
-    Baseline --> Validator
-    Validator --> Result[Trip, violations, warnings and attribution]
-    Result --> User
+    Form[Trip form: app.js] --> HTTP[api.js: POST /api/plan/stream]
+    HTTP --> API[main.py: parse Pydantic input]
+    API --> Stream[streaming.py: request-local progress stream]
+    Stream --> Pipeline[services/pipeline.py]
+    Pipeline --> Baseline[Retain original fixed events]
+    Baseline --> Facts[Public-data adapters or explicit demo fixtures]
+    Facts --> Hours[Conservative opening-window conversion]
+    Hours --> Candidate[generation.py: local candidate scheduler]
+    Candidate --> Rules[validator.py: independent deterministic checks]
+    Rules --> Result[Schedule, issues, research records and preparation links]
+    Result --> Render[render.js: display and export]
+    Facts --> Stream
 ```
 
-`POST /validate` also exposes the pure validator independently of generation and
-network services. It receives the original fixed events separately from the
-candidate, so generation cannot redefine what counts as preserved.
+`POST /api/plan` exposes the same process as a normal JSON response. `POST /validate`
+can check an existing candidate without planning or network access. The candidate
+and original fixed-event baseline are separate objects, so generation cannot
+redefine which commitments must stay fixed.
 
-## Files and boundaries
+## Module boundaries
 
-| Path | Responsibility |
+| Area | Responsibility |
 | --- | --- |
-| `backend/app/models.py` | Shape/type checks and request limits |
-| `backend/app/validator.py` | Pure deterministic rules, with no I/O or mutation |
-| `backend/app/time_utils.py` | Explicit local-to-aware conversion with DST checks |
-| `backend/app/main.py` | Flask factory, routes, safe error responses, static assets |
-| `backend/app/services/pipeline.py` | Retain baseline, collect facts, generate, validate |
-| `backend/app/services/generation.py` | Greedy scheduling and optional OpenAI adapter |
-| `backend/app/services/providers.py` | Cached, bounded, named public-service requests |
-| `backend/app/services/opening_hours.py` | Conservative subset of OSM weekly hours |
-| `backend/app/services/demo.py` | Explicit synthetic Chicago fixture and example input |
-| `frontend/` | Accessible form, fixed-event input, schedule and issue display |
-| `backend/tests/` | Offline model, rule, provider, pipeline and HTTP-contract tests |
-| `scripts/` | Explicit live-provider and browser smoke checks |
+| `src/backend/app/main.py` | Flask factory, routes, request parsing and safe errors |
+| `models.py` | Request/result types, limits and malformed-input checks |
+| `validator.py` | Pure constraints; no HTTP, filesystem/environment reads or mutation |
+| `time_utils.py` | Explicit local-time interpretation and DST ambiguity checks |
+| `streaming.py` | Bounded worker/queue; newline-delimited public events to the browser |
+| `services/pipeline.py` | Coordinate the entire planning operation |
+| `services/providers.py` | Named no-key HTTP adapters, shared cache/rate limits |
+| `services/opening_hours.py` | Translate a supported subset of OSM tags to aware windows |
+| `services/generation.py` | Greedy scheduling of known places around original commitments |
+| `services/research.py` | Request-local public log, safe source URLs and unverified preparation items |
+| `services/demo.py` | Explicit synthetic Chicago input/facts |
+| `src/frontend/static/api.js` | JSON and progress-stream transport |
+| `src/frontend/static/app.js` | Form state, cancellation, planning/recheck/download actions |
+| `src/frontend/static/render.js` | Safe DOM rendering; no provider calls |
 
-The frontend does not receive secrets or call provider APIs directly. The validator
-does not import Flask, requests, environment configuration or provider adapters.
-Dependencies and prices are not inferred from an LLM's confidence.
+See [the Chinese file-by-file tour](code-tour.zh-CN.md) for the complete inventory.
 
-## Planning and validation
+## Source evidence
 
-The heuristic planner tries 60-minute visits at 15-minute increments between 09:00
-and 18:00 in the trip timezone. It uses known opening windows and directed route
-estimates to find slots around the original commitments. Unknown routes receive a
-30-minute planning buffer but remain missing facts in the independent validator.
-Activities that cannot fit are listed explicitly. This is a small greedy scheduler,
-not a global optimizer, and it does not implement rich preference ranking.
+A real network request records its URL and running/completed/failed state. Cache
+hits are labeled cached and do not claim a new request. Observers are request-local;
+only the cache and Nominatim throttle are shared across concurrent plans. The log
+contains observable actions, not an LLM's private reasoning.
 
-The optional OpenAI adapter requests JSON, parses it through the same models,
-rejects unknown or changed places, and discards ungrounded price suggestions.
-It does not silently correct moved/deleted fixed events: the separate baseline
-allows the validator to identify those violations. Malformed AI output yields a
-clear service error. No live AI request is claimed without a configured key and
-an executed test.
+Demo records are explicitly examples and never claim a network visit. OSM map
+records and website tags can be linked, but venue websites are not fetched here.
+Preparation actions say to check ticket/reservation policies; availability and
+booking requirements remain unknown. No purchase or reservation occurs.
 
-## External facts and uncertainty
+## Public data and planning
 
-Open-Meteo resolves the city; Nominatim resolves explicitly requested places and
-fixed-event addresses; Overpass supplies a small attraction list and raw opening
-tags; OSRM supplies directed driving durations, rounded up to whole minutes.
-Opening tags use the destination timezone, independently of the trip display zone.
-Coordinates may also be provided for fixed events through the JSON API.
+Open-Meteo supplies city coordinates/timezone; Nominatim resolves explicit places;
+Overpass returns a small nearby list and tags; OSRM provides directed driving
+estimates rounded up to whole minutes. Requests are bounded, cached and attributed.
 
-Opening strings support `24/7`, daily time ranges, weekday/range selectors, comma
-separated time ranges, overnight periods, and `off`/`closed`. Holiday, seasonal,
-sunrise/sunset, and other unsupported expressions remain unknown. An explicit empty
-set of windows means closed; no record means unavailable information.
+Opening strings support `24/7`, simple daily/weekday/range rules, comma-separated
+spans, overnight periods and `off`/`closed`. Holidays and unsupported syntax stay
+unknown. Raw venue hours use the destination timezone and destination calendar
+dates even when the trip display zone differs.
 
-Essential place lookup failures produce 503. Missing route data can produce a
-candidate with explicit incomplete-validation warnings. There is no silent switch
-from live to synthetic data. Public-service capacity and coverage are limited.
+The scheduler tries 60-minute visits every 15 minutes between 09:00 and 18:00.
+Known facts constrain slots; an unknown transfer receives a planning buffer but is
+not turned into a factual travel estimate. Unscheduled visits are reported. This
+is a greedy starter, not a preference optimizer or an autonomous agent.
 
-## Team responsibilities from the final proposal
+## Planned ownership and future work
 
-These are planned leads, not claims about completed individual work:
+The proposal lists Yuqing for AI integration, Che for AI/API integration, Xintong
+for validation/repair, and Zhanyang for frontend. These are proposed leads, not
+claims about completed work; integration and testing are shared.
 
-| Member | Proposed lead responsibility |
-| --- | --- |
-| Yuqing | AI integration |
-| Che | AI and external API integration |
-| Xintong | Validation and repair logic |
-| Zhanyang | Web frontend |
-
-Backend integration, testing and interface review are shared. The current code
-provides a common baseline for those areas; it does not assign ownership based on
-who generated or reviewed this scaffold.
-
-## Deliberately deferred
-
-There is no database, authentication, booking/payment functionality, automatic
-repair, live traffic, transit/walking route engine, or global optimization. Trips
-remain in the browser's memory and can be downloaded as JSON. Future persistence
-and repair should reuse the contracts and independently revalidate their output.
+A future model adapter can replace the candidate-generation step or choose which
+bounded lookup tool to call next. It must retain the original commitments, use
+structured results with source evidence, and pass through the same validator.
+Persistence, automatic repair and arbitrary webpage reading are not implemented.

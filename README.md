@@ -1,113 +1,114 @@
 # Itinerary That Holds Up
 
-A UIUC CS222 travel-planning prototype built around commitments that must stay fixed.
-Users enter a city, dates, preferences, desired places, and fixed events. A candidate
-planner proposes a schedule; an independent Python validator explains whether it
-fits the supplied constraints.
+A UIUC CS222 travel-planning prototype: enter a trip, keep fixed commitments in
+place, inspect the sources, and get a schedule with deterministic constraint checks.
 
-## What is implemented
+**Current version uses no LLM or paid API.** The planner is a small Python
+scheduler. Public map-data adapters require no API key; Chicago example mode is
+entirely offline. Live requests, cache hits and failures are visible in the research
+log. A venue link is a reference, not proof of current hours or ticket availability.
 
-- A Flask backend and responsive HTML/CSS/JavaScript interface.
-- Pydantic contracts for trips, activities, authoritative original fixed events,
-  directed travel estimates, opening windows, and validation results.
-- Deterministic overlap, travel-time, opening-hour, trip-bound, and fixed-event checks.
-- Optional budget checks using supplied estimates; unknown prices remain unknown.
-- A no-key rule-based planner and a completely offline Chicago demonstration.
-- Adapters for Open-Meteo geocoding, OpenStreetMap via Nominatim/Overpass, and OSRM driving times.
-- An optional OpenAI candidate generator, with schema checks and independent revalidation.
-- Offline regression tests, opt-in HTTP/browser/live-service smoke checks, and GitHub Actions.
+**中文逐文件导读：[代码都在做什么](docs/code-tour.zh-CN.md)**
 
-This follows the final proposal's Flask/basic-JavaScript direction. The original
-FastAPI/React-only design has been replaced. Persistence, automatic repair, transit
-routing, bookings, and global schedule optimization remain future work.
+## Source layout
 
-## Run locally
+```text
+src/                        # all application source code
+  backend/app/
+    main.py                 # Flask routes and HTTP errors
+    models.py               # request/result contracts
+    validator.py            # pure scheduling rules
+    time_utils.py           # timezone/DST handling
+    streaming.py            # progress stream to the browser
+    services/               # data adapters, candidate scheduling and source evidence
+  frontend/
+    index.html              # page structure
+    static/
+      app.js                # form and page controller
+      api.js                # JSON and streaming HTTP client
+      render.js             # safe rendering of schedules, sources and checklists
+      style.css             # responsive visual design
+tests/                      # offline tests
+scripts/                    # opt-in browser/live-provider smoke checks
+docs/                       # architecture, contracts, walkthrough and evidence
+```
 
-Use Python 3.12. From the repository root:
+`src` is the conventional abbreviation for source code. Run commands from the
+repository root so Python can import `src.backend`; no path modifications are needed.
+
+## Install and run
+
+Python 3.12, from the repository root:
 
 ```sh
 python3.12 -m venv .venv
 . .venv/bin/activate
-python -m pip install --require-hashes -r backend/requirements.lock
-python -m flask --app backend.app.main:create_app run --host 127.0.0.1 --port 8000
+python -m pip install --require-hashes -r requirements.lock
+python -m flask --app src.backend.app.main:create_app run --host 127.0.0.1 --port 8000
 ```
 
-Open the locally running application in your browser. The page loads the Chicago
-example; select **Build & check my itinerary**. It schedules four flexible visits
-around the fixed interview. Demo hours, prices, office coordinates, and 20-minute
-travel estimates are synthetic fixtures, explicitly labeled in the result.
+On Windows, activate with `.venv\Scripts\activate` instead of the `source` command.
+The current cloud instance already has `/workspace/.venvs/cs222-project`; activate
+that environment when continuing here. Cloud tasks are isolated; use the existing
+checkout without creating a second Git worktree.
 
-The current cloud instance uses `/workspace/.venvs/cs222-project` instead of `.venv`.
-Activate that existing environment when continuing work here. Each cloud task is
-already isolated; use the existing checkout without creating another Git worktree.
+The page loads the Chicago example. Click **Build & check my itinerary**. The result
+contains four flexible visits around a fixed interview. Open **Research log** to
+see the steps and source records, and **Before you go** for unverified preparation
+suggestions. The download contains the schedule, original commitments, facts,
+research log and links. Demo hours, prices, meeting coordinates and travel times
+are synthetic and visibly labeled; no site is contacted in this mode.
 
-## Modes and external services
+[Desktop screenshot](docs/screenshots/desktop.png) ·
+[Research log screenshot](docs/screenshots/research.png) ·
+[Mobile screenshot](docs/screenshots/mobile.png)
 
-| Mode | Credentials | Behavior |
-| --- | --- | --- |
-| Example data + rule-based planner | None | Offline, deterministic, synthetic Chicago facts |
-| Live public data + rule-based planner | None | Fetch city, places/opening tags, and estimated driving times |
-| OpenAI planner | Server-side key | Generate structured candidates using supplied places, then validate |
+## Free public-data mode
 
-Live services require outbound access to:
+Select **Public map services · live lookup** for real HTTP requests to:
+
+| Service | Use |
+| --- | --- |
+| Open-Meteo geocoding | Resolve a city and its timezone |
+| Nominatim / OpenStreetMap | Resolve explicitly requested places and fixed-event addresses |
+| Overpass / OpenStreetMap | Retrieve a small nearby attraction list and opening/website tags |
+| OSRM | Directed estimated **driving** times, without live traffic |
+
+Outbound destinations:
 
 - `geocoding-api.open-meteo.com`
 - `nominatim.openstreetmap.org`
 - `overpass-api.de`
 - `router.project-osrm.org`
 
-These public endpoints have limited capacity and no availability guarantee. Queries
-are cached for 15 minutes. Nominatim calls are serialized at no more than one per
-second; there is no autocomplete or bulk geocoding. Attribution is shown in the UI.
+These are public services with limited capacity, not guaranteed production APIs.
+The client caches public results for 15 minutes and serializes Nominatim requests
+at no more than one per second. There is no autocomplete or bulk geocoding.
 
-The managed cloud's current network policy initially blocked these domains. Domain
-additions were saved as an environment draft; a saved draft does not establish live
-connectivity. See [validation evidence](docs/validation-report.md) for observed outcomes.
+This cloud's applied allowlist initially blocked the destinations. The required
+domains were saved in environment settings as a draft; saving is not application
+or publication. See [the validation record](docs/validation-report.md) for observed
+results. A failed live lookup is displayed as failed; it never becomes demo data.
 
-For optional AI planning, configure `PLANNER_API_KEY` securely in the server
-process and optionally set `PLANNER_MODEL` (default `gpt-4.1-mini`). Permit
-`api.openai.com` in the server's outbound policy. `.env.example` documents names;
-the app does not automatically load `.env` files. Keys never belong in the frontend,
-repository, screenshots, or report output. OpenAI is not advertised as a free service.
-Without a configured key, the OpenAI UI option is disabled; explicit API attempts
-return a clear 503 instead of silently switching planners.
+Opening tags are not always available or parseable. Unknown hours/routes stay
+unverified. A record's venue website is shown as **not checked here**: the prototype
+does not scrape arbitrary pages, check inventory, buy tickets or make reservations.
 
-## Tests and functional checks
+## HTTP endpoints
 
-With the environment activated, from the repository root:
+| Endpoint | Responsibility |
+| --- | --- |
+| `GET /` | Serve the interface |
+| `GET /api/health` | Local capability flags; `llm_connected=false`, no remote calls |
+| `GET /api/example` | Offline starter input |
+| `POST /api/plan` | One complete JSON planning result |
+| `POST /api/plan/stream` | Actual progress events, then one result/error, as newline-delimited JSON |
+| `POST /validate` | Validate an existing candidate against its original commitments and supplied facts |
 
-```sh
-python -m flake8 backend scripts
-python -m pytest --cov=backend/app --cov-report=term-missing --cov-fail-under=90
-```
-
-The pytest suite forbids real HTTP requests and uses injected provider responses.
-It does not require API keys, public endpoints, a database, or a running server.
-
-To deliberately test the real no-key providers:
-
-```sh
-python -m scripts.smoke_live --destination Chicago
-```
-
-This makes real public requests and exits nonzero when a required service fails.
-Missing or unsupported opening data is reported as incomplete coverage, not guessed.
-It is deliberately separate from CI. OSRM estimates are for **driving**, without
-live traffic; this prototype does not claim walking or transit estimates.
-
-Optional browser checks need Playwright and an installed Chromium, separately from
-application dependencies. With the Flask server running and that tooling available:
-
-```sh
-python -m scripts.smoke_browser --chromium /usr/bin/chromium
-```
-
-The script checks desktop/mobile planning, fixed-event display, revalidation,
-download, error messages, and safe rendering of user text. Outputs are ignored under
-`test-results/`. [Recorded checks](docs/validation-report.md) distinguish executed
-checks, mocked integrations, and blocked live operations.
-
-## API examples
+`is_valid=true` means no known constraint failed. Missing-data warnings mean partial
+coverage. The original fixed events are stored separately from the candidate, so
+moved or deleted commitments can be detected. Budget checking is optional and only
+uses supplied estimates; unknown prices are not treated as free.
 
 ```sh
 curl --fail-with-body -H 'Content-Type: application/json' \
@@ -116,27 +117,51 @@ curl --fail-with-body -H 'Content-Type: application/json' \
   --data-binary @examples/validate-valid.json http://127.0.0.1:8000/validate
 ```
 
-`POST /api/plan` returns the candidate trip, its authoritative fixed-event baseline,
-facts, validation, source mode, planner name, notes and attribution. Its `request`
-field can be sent directly to `POST /validate` after editing flexible activities.
-A positive `is_valid` means no failed **known** constraints. Warnings mean some
-checks remain unverified; the UI presents this as **Partially checked**.
+## Tests
 
-## Development references
+```sh
+python -m flake8 src tests scripts
+python -m pytest --cov=src/backend/app --cov-report=term-missing --cov-fail-under=90
+```
 
-- [Architecture and responsibilities](docs/architecture.md)
-- [Implemented API and rule contract](docs/mvp-spec.md)
-- [Completed work and next tasks](docs/implementation-plan.md)
-- [Test strategy](docs/test-plan.md)
-- [Validation evidence and limitations](docs/validation-report.md)
+The default suite forbids real HTTP and uses injected provider responses. It requires
+no API keys, database or running server. To explicitly contact real map services:
 
-Update direct dependency bounds in `backend/requirements.in` intentionally, then
-regenerate the lock with pip-tools and review the result:
+```sh
+python -m scripts.smoke_live --destination Chicago
+```
+
+Optional browser tooling is separate from application dependencies. With Playwright
+and Chromium available and the Flask server running:
+
+```sh
+python -m scripts.smoke_browser --chromium /usr/bin/chromium
+```
+
+Browser outputs go into ignored `test-results/`. GitHub Actions installs the hash-locked
+dependencies and runs style/coverage checks. No remote CI outcome is claimed without
+observing its run.
+
+## Further reading and limits
+
+- [逐个文件的中文说明](docs/code-tour.zh-CN.md)
+- [Check-In #4 demonstration notes](docs/checkin4-demo.md)
+- [Architecture](docs/architecture.md), [API contract](docs/mvp-spec.md)
+- [Next tasks](docs/implementation-plan.md), [test plan](docs/test-plan.md)
+- [Executed validation and external blockers](docs/validation-report.md)
+
+LLM integration remains a future proposal step. It can call the same lookup tools,
+return structured candidates, and still use the independent validator. This version
+has no model credentials, model API calls or autonomous web crawler. Persistence,
+automatic repair, walking/transit routing, bookings and global optimization are also
+outside this prototype.
+
+For intentional dependency updates, edit `requirements.in`, regenerate with the
+separate pip-tools development tool, and review the resulting pins/hashes:
 
 ```sh
 python -m piptools compile --generate-hashes --no-emit-index-url \
-  --no-emit-trusted-host --output-file backend/requirements.lock backend/requirements.in
+  --no-emit-trusted-host --output-file requirements.lock requirements.in
 ```
 
-pip-tools is a separate development tool, not a runtime dependency. Major changes
-should use a feature branch and PR, with another teammate reviewing before merge.
+Develop on feature branches and use teammate review before merging into `main`.

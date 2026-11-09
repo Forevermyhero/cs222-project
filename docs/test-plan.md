@@ -1,50 +1,45 @@
-# Test plan and verification boundary
+# Tests and verification boundary
 
-## Offline suite
+## Offline tests
 
-Run `python -m pytest --cov=backend/app --cov-report=term-missing --cov-fail-under=90`
-from the repository root. An autouse fixture rejects accidental real HTTP requests.
-Tests use fixed dates and exact decimal amounts. No API keys, database or running
-server are needed. Style is checked with `python -m flake8 backend scripts`.
+From the repository root:
 
-| Area | Existing cases |
+```sh
+python -m flake8 src tests scripts
+python -m pytest --cov=src/backend/app --cov-report=term-missing --cov-fail-under=90
+```
+
+An autouse fixture rejects real HTTP requests. Dates, input facts and expected
+results are controlled. No key, live service, database or running server is required.
+
+| File | Verified behavior |
 | --- | --- |
-| Models | Required fields, blank values, strict flags/minutes, timezone/offset errors, invalid dates, cost precision, duplicate IDs/fact keys, missing baseline, unknown locations, paired coordinates |
-| Pure rules | Valid itinerary; invalid intervals; trip bounds; every overlap pair; directed travel gaps; optional budget; closed locations; missing-data warnings |
-| Fixed events | Original event preserved; moved, deleted, replaced/renamed, changed location/flag; unexpected candidate fixed event |
-| Boundaries | Adjacent intervals; exact travel/budget/opening equality; one-second shortfall; touching opening windows; opening gaps; midnight; UTC-equivalent offsets; DST |
-| Invariants | No request mutation, original order retained, deterministic repeated/permuted results, accumulation of independent failures |
-| Provider adapters | Request headers/timeouts; cache expiry; Nominatim throttling; malformed/missing data; directed OSRM rounding; unknown routes; service timeouts |
-| Opening parser | Supported weekday/time/overnight/closed expressions; unsupported holidays and invalid clocks remain unknown |
-| Pipeline | Offline demo, retained baseline, unscheduled visits, mocked live data, missing route/hour coverage, failed services, explicit modes |
-| Optional AI | Missing key, malformed JSON, candidate parsing, independent detection of changed fixed time, ungrounded prices discarded |
-| Flask | HTML/assets, security headers, request/result parity, 200 semantic failures, 422 shape errors, 400/413/415 HTTP errors, 503 provider failures, key-free health output |
+| `tests/test_models.py` | Input types, costs, date/zone rules, duplicate IDs/facts, coordinates and required baseline |
+| `tests/test_validator.py` | Core constraints, boundaries, exact amounts, DST, immutability and deterministic ordering |
+| `tests/test_services.py` | Injected public responses, cache/throttle, malformed data, opening parser, scheduling and timezone/date-line handling |
+| `tests/test_api.py` | Flask HTML/assets, JSON contracts, 200 semantic results, 422 input errors, 400/413/415 errors and explicit provider failures |
+| `tests/test_research.py` | Honest demo/live/cache provenance, safe links, no booking claims, streamed progress before lookup completion, errors and bounded capacity |
 
-Candidate fixed-event comparison must use a separate original baseline. Merely
-checking that the validator does not mutate its input is not enough. Test AI
-responses with deliberately changed original times even when the returned schedule
-would otherwise be nonoverlapping.
+The original fixed events must be compared with generated candidates. Merely proving
+that the validator does not mutate its input is not sufficient.
 
-## Real HTTP and browser checks
+## Actual local HTTP and browser checks
 
-Start Flask using the README command and submit both example files. Inspect result
-bodies, not only the listening port. The sample plan must preserve the interview,
-produce the expected visits, and match an independent `/validate` call. Editing a
-flexible interval to overlap the interview must report an overlap.
+Use the README startup command. Submit both JSON examples and compare the planning
+result with a separate `/validate` call. The interview must remain unchanged and a
+manually overlapping flexible event must fail. An open port alone is not readiness.
 
-The optional `scripts.smoke_browser` checks desktop and mobile form flows,
-revalidation, itinerary download, visible synthetic-data labeling, safe rendering
-of user text, server-side error display, event add/remove, and absence of page errors.
-It saves screenshots and the exported itinerary under an ignored output path.
+`scripts.smoke_browser` exercises desktop/mobile input, five-event output,
+revalidation, JSON export, the seven-step example log, source cards, unverified
+preparation suggestions, event add/remove, error display and safe rendering of
+user markup. It saves screenshots and the downloaded result to an ignored path.
 
-## Real external-service checks
+## External checks
 
-`scripts.smoke_live` deliberately contacts the public map APIs. Its failures are
-not hidden by demo fallback. It exercises geocoding, attraction lookup, one explicit
-Nominatim place query, directed driving routes and the planning pipeline. Unknown
-opening information may legitimately leave coverage incomplete.
+`scripts.smoke_live` deliberately contacts the four public map services. A service
+or environment failure exits nonzero and never silently selects examples. Supported
+opening coverage can legitimately remain incomplete.
 
-A live AI call is separate and requires a configured key/model and outbound access.
-Mocked OpenAI tests verify our contract handling, not the behavior of a real model.
-No live API, browser or remote CI result should be described as passed unless that
-check actually executed and completed. See the recorded validation report.
+No model API is connected in this revision. There is no claim of real LLM generation,
+autonomous browsing, website scraping, inventory verification, purchases or bookings.
+See [the validation report](validation-report.md) for executed results and access blockers.

@@ -1,10 +1,12 @@
+"""Pure-rule tests: constraints, timezone boundaries, stable results and no mutation."""
+
 import copy
 from datetime import datetime, timezone
 
 import pytest
 
-from backend.app.models import ValidationRequest
-from backend.app.validator import validate_itinerary
+from src.backend.app.models import ValidationRequest
+from src.backend.app.validator import validate_itinerary
 
 
 def result(payload):

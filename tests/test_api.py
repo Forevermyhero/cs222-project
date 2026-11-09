@@ -1,7 +1,9 @@
+"""Flask contract tests: routes, HTTP errors, security headers and JSON round trips."""
+
 import pytest
 
-from backend.app.main import create_app
-from backend.app.services.providers import ProviderError
+from src.backend.app.main import create_app
+from src.backend.app.services.providers import ProviderError
 
 
 def test_frontend_and_health(web):
@@ -11,7 +13,7 @@ def test_frontend_and_health(web):
     assert "script-src 'self'" in page.headers["Content-Security-Policy"]
     assert web.get("/static/app.js").status_code == 200
     assert web.get("/static/style.css").status_code == 200
-    assert web.get("/api/health").get_json()["openai_configured"] is False
+    assert web.get("/api/health").get_json()["llm_connected"] is False
 
 
 def test_validation_semantic_results_and_422(web, payload):
@@ -38,8 +40,8 @@ def test_plan_demo_roundtrip(web):
     assert web.post("/validate", json=result["request"]).get_json() == result["validation"]
     data["planner"] = "openai"
     unavailable = web.post("/api/plan", json=data)
-    assert unavailable.status_code == 503
-    assert unavailable.get_json()["provider"] == "OpenAI"
+    assert unavailable.status_code == 422
+    assert unavailable.get_json()["detail"][0]["loc"] == ["planner"]
 
 
 def test_live_failure_does_not_silently_use_demo():
@@ -52,7 +54,9 @@ def test_live_failure_does_not_silently_use_demo():
         data["data_mode"] = "live"
         response = web.post("/api/plan", json=data)
         assert response.status_code == 503
-        assert response.get_json() == {"error": "Test service outage", "provider": "Open-Meteo"}
+        assert response.get_json()["error"] == "Test service outage"
+        assert response.get_json()["provider"] == "Open-Meteo"
+        assert response.get_json()["research_steps"][-1]["status"] == "failed"
 
 
 @pytest.mark.parametrize("kind,status", [("json", 400), ("mime", 415), ("size", 413)])
@@ -72,8 +76,8 @@ def test_plan_input_error_and_configuration_is_private(web):
     data = web.get("/api/example").get_json()
     data["destination"] = "Paris"
     assert web.post("/api/plan", json=data).status_code == 422
-    app = create_app({"TESTING": True, "PLANNER_API_KEY": "private-test-value"})
+    app = create_app({"TESTING": True, "INTERNAL_TEST_VALUE": "private-test-value"})
     with app.test_client() as client:
         response = client.get("/api/health")
-        assert response.get_json()["openai_configured"]
+        assert not response.get_json()["llm_connected"]
         assert b"private-test-value" not in response.data

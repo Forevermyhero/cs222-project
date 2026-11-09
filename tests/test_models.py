@@ -1,10 +1,12 @@
+"""Request contract tests: reject malformed data before itinerary rules run."""
+
 import copy
 
 import pytest
 from pydantic import ValidationError
 
-from backend.app.models import Activity, PlanRequest, ValidationRequest
-from backend.app.services.demo import example_request
+from src.backend.app.models import Activity, PlanRequest, ValidationRequest
+from src.backend.app.services.demo import example_request
 
 
 @pytest.mark.parametrize("field,value", [

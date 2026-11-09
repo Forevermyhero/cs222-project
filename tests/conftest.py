@@ -1,10 +1,12 @@
+"""Shared fixtures: reproducible trips and a guard that forbids accidental real HTTP."""
+
 import copy
 
 import pytest
 import requests
 
-from backend.app.main import create_app
-from backend.app.models import ValidationRequest
+from src.backend.app.main import create_app
+from src.backend.app.models import ValidationRequest
 
 
 @pytest.fixture(autouse=True)
@@ -49,6 +51,6 @@ def parsed(payload):
 
 @pytest.fixture
 def web():
-    app = create_app({"TESTING": True, "PLANNER_API_KEY": None})
+    app = create_app({"TESTING": True})
     with app.test_client() as client:
         yield client

@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 
 def localize(value: datetime, zone: ZoneInfo) -> datetime:
+    """Interpret form wall times in an explicit zone, rejecting ambiguous DST inputs."""
     if value.tzinfo is not None:
         return value.astimezone(zone)
     candidates = []

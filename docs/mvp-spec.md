@@ -90,7 +90,7 @@ throughout the trip; no record means unknown and warns once per location.
 Input fields: `destination`, `start_date`, `end_date`, `timezone` (default
 `America/Chicago`), `preferences=[]`, `requested_places=[]` (at most 3),
 `fixed_events=[]` (at most 10), optional `budget`, `data_mode=demo|live`, and
-`planner=heuristic|openai`. The defaults are demo and heuristic.
+`planner=heuristic`. The defaults are demo and heuristic.
 
 Each fixed form event has `id`, `name`, `location` text, start/end ISO timestamps
 (local in the trip zone or explicit offsets), and optional paired coordinates.
@@ -110,7 +110,7 @@ read alongside it. Demo facts are synthetic even when all checks pass. A valid
 empty itinerary is allowed by `/validate`; the planner explicitly lists visits it
 could not schedule.
 
-Essential provider failures and unconfigured/failed OpenAI generation return 503;
+Essential provider failures return 503; unsupported planner names return 422;
 there is no automatic substitution of demo data. Missing routing can yield a
 partially checked candidate with warnings. Malformed JSON returns 400, wrong content
 type 415, oversized input 413. Unexpected programming errors remain server errors.
@@ -118,3 +118,24 @@ type 415, oversized input 413. Unexpected programming errors remain server error
 Other endpoints: `GET /` serves the page; `GET /api/health` reports capability flags
 without keys; `GET /api/example` supplies the synthetic starter request. Health does
 not make external calls or prove live-provider availability.
+
+## Progress and source fields
+
+`POST /api/plan` also returns `research_steps`, `sources`, and `preparation`. A step
+has an ID, title, status, detail, provider, optional public URL, data mode and an
+explicit `network_request` flag. Actual calls can be running/completed/failed; cache
+hits are marked cached. Demo fact loading is marked example and makes no web claim.
+
+A source card preserves the reported opening expression, its parsing/coverage state,
+a map-record URL and an optional website tag. `website_checked=false` means the
+venue site was not fetched. Preparation items have `booking_required=null` and
+`availability_checked=false`; they suggest checks without asserting inventory.
+
+`POST /api/plan/stream` accepts the same input and returns newline-delimited JSON.
+`type=progress` updates one step; `type=result` provides the complete response;
+`type=error` includes an explanatory message and status. Heartbeats carry no work
+claim. Shape errors return ordinary HTTP 422 before streaming begins. Once a stream
+has started, service/validation errors are terminal error events inside HTTP 200.
+The browser renders them as failures. At most two streamed plans run concurrently.
+Client disconnects stop work at the next observation; individual provider calls
+still have bounded timeouts. Streams expire after 180 seconds.

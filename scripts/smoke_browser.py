@@ -36,6 +36,13 @@ def main():
         download.value.save_as(output / "itinerary.json")
         assert json.loads((output / "itinerary.json").read_text())["validation"]["is_valid"]
         page.screenshot(path=str(output / "desktop.png"), full_page=True)
+        page.get_by_text("Research log", exact=True).click()
+        expect(page.locator(".research-step")).to_have_count(7)
+        expect(page.locator("#research-disclaimer")).to_contain_text("No live websites")
+        expect(page.locator(".source-card")).to_have_count(4)
+        expect(page.locator("#preparation-list li")).to_have_count(5)
+        expect(page.locator('a[href^="javascript:"]')).to_have_count(0)
+        page.locator("#research-panel").screenshot(path=str(output / "research.png"))
 
         # User text must be displayed as text, never inserted as HTML.
         hostile = "Interview <img src=x onerror=alert(1)>"
@@ -61,7 +68,7 @@ def main():
         page.screenshot(path=str(output / "mobile.png"), full_page=True)
         assert not errors, errors
         browser.close()
-    print(json.dumps({"passed": True, "activities": 5, "fixed_events": 1,
+    print(json.dumps({"passed": True, "activities": 5, "fixed_events": 1, "research_steps": 7,
                       "javascript_errors": errors, "screenshots": str(output)}, indent=2))
 
 

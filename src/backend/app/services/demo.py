@@ -13,8 +13,12 @@ def demo_places():
         ("river", "Chicago Riverwalk", 41.8882, -87.6262, "Mo-Su 08:00-20:00", "0.00"),
         ("museum", "Field Museum", 41.8663, -87.6170, "Mo-Su 09:00-17:00", "30.00"),
     ]
+    # Reference links are useful to a traveler, but are not fetched or verified in demo mode.
+    references = {"art": "https://www.artic.edu/visit",
+                  "museum": "https://www.fieldmuseum.org/visit"}
     return [Place(Location(id=f"demo:{key}", name=name, latitude=lat, longitude=lon),
-                  hours, Decimal(cost)) for key, name, lat, lon, hours, cost in rows]
+                  hours, Decimal(cost), references.get(key))
+            for key, name, lat, lon, hours, cost in rows]
 
 
 def example_request():

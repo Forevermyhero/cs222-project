@@ -3,9 +3,9 @@
 import argparse
 import json
 
-from backend.app.models import PlanRequest
-from backend.app.services.pipeline import plan_trip
-from backend.app.services.providers import ProviderError, PublicDataClient
+from src.backend.app.models import PlanRequest
+from src.backend.app.services.pipeline import plan_trip
+from src.backend.app.services.providers import ProviderError, PublicDataClient
 
 
 def main():

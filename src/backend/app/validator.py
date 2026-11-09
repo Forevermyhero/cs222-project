@@ -13,6 +13,7 @@ def utc(value):
 
 
 def validate_itinerary(request: ValidationRequest) -> ValidationResult:
+    """Compare a candidate to its baseline/facts without changing any input object."""
     trip = request.trip
     violations, warnings = [], []
 

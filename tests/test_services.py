@@ -1,20 +1,19 @@
+"""Provider and planner tests using injected responses, never a real online service."""
+
 import copy
-import json
 from datetime import date, datetime, timezone
-from decimal import Decimal
 from unittest.mock import Mock
 from zoneinfo import ZoneInfo
 
 import pytest
 import requests
 
-from backend.app.models import PlanRequest
-from backend.app.services.demo import demo_places, example_request
-from backend.app.services.generation import openai_plan
-from backend.app.services.opening_hours import expand_hours
-from backend.app.services.pipeline import plan_trip
-from backend.app.services.providers import ProviderError, PublicDataClient
-from backend.app.time_utils import localize
+from src.backend.app.models import PlanRequest
+from src.backend.app.services.demo import demo_places, example_request
+from src.backend.app.services.opening_hours import expand_hours
+from src.backend.app.services.pipeline import plan_trip
+from src.backend.app.services.providers import ProviderError, PublicDataClient
+from src.backend.app.time_utils import localize
 
 
 class FakeSession:
@@ -58,7 +57,7 @@ class FakeMapClient:
     def travel_matrix(self, locations):
         if self.route_error:
             raise ProviderError("OSRM", "Test OSRM outage")
-        from backend.app.models import TravelTime
+        from src.backend.app.models import TravelTime
         return [TravelTime(from_location_id=a.id, to_location_id=b.id, minutes=10)
                 for a in locations for b in locations if a.id != b.id]
 
@@ -94,13 +93,15 @@ def test_transport_failures_are_explicit(error):
 
 def test_nominatim_extratags_and_rate_limit(monkeypatch):
     session = FakeSession([{"osm_type": "way", "osm_id": 42, "lat": "41.88", "lon": "-87.63",
-                            "extratags": {"opening_hours": "24/7"}}])
+                            "extratags": {"opening_hours": "24/7",
+                                          "website": "https://venue.example/visit"}}])
     client = PublicDataClient(session)
-    monkeypatch.setattr("backend.app.services.providers.time.monotonic", lambda: 100.0)
+    monkeypatch.setattr("src.backend.app.services.providers.time.monotonic", lambda: 100.0)
     sleep = Mock()
-    monkeypatch.setattr("backend.app.services.providers.time.sleep", sleep)
+    monkeypatch.setattr("src.backend.app.services.providers.time.sleep", sleep)
     first = client.find_place("Museum", "Chicago")
     assert first.opening_expression == "24/7" and first.location.id == "osm:way:42"
+    assert first.website == "https://venue.example/visit"
     client.find_place("Museum", "Chicago")
     sleep.assert_called_once()
     assert len(session.calls) == 1
@@ -111,14 +112,17 @@ def test_nominatim_extratags_and_rate_limit(monkeypatch):
 def test_overpass_skips_missing_names_or_coordinates():
     payload = {"elements": [
         {"type": "node", "id": 1, "lat": 41.88, "lon": -87.63,
-         "tags": {"name": "Museum", "opening_hours": "Mo-Su 09:00-17:00"}},
+         "tags": {"name": "Museum", "opening_hours": "Mo-Su 09:00-17:00",
+                  "website": "javascript:alert(1)"}},
         {"type": "way", "id": 2, "center": {"lat": 41.9, "lon": -87.6},
-         "tags": {"name": "Gallery"}},
+         "tags": {"name": "Gallery", "contact:website": "https://gallery.example"}},
         {"type": "node", "id": 3, "tags": {}},
         {"type": "node", "id": 4, "tags": {"name": "No coordinates"}},
     ]}
     result = PublicDataClient(FakeSession(payload)).attractions(demo_places()[0].location)
     assert [p.location.name for p in result] == ["Gallery", "Museum"]
+    assert result[0].website == "https://gallery.example"
+    assert result[1].website is None
     with pytest.raises(ProviderError):
         PublicDataClient(FakeSession({"remark": "timeout"})).attractions(result[0].location)
 
@@ -274,38 +278,6 @@ def test_no_slot_produces_explicit_unscheduled_note():
     assert len(result["request"]["trip"]["activities"]) == 1
 
 
-def test_optional_openai_missing_key_and_malformed_response():
-    request = PlanRequest.model_validate(example_request())
-    with pytest.raises(ProviderError, match="not configured"):
-        openai_plan(request, [], demo_places(), None, "test-model")
-    session = FakeSession({"choices": [{"message": {"content": '{"unexpected": []}'}}]})
-    with pytest.raises(ProviderError, match="malformed"):
-        openai_plan(request, [], demo_places(), "test-key", "test-model", session)
-    assert session.calls[0][1]["headers"]["Authorization"] == "Bearer test-key"
-
-
-def test_optional_openai_candidates_are_parsed_and_revalidated():
-    request = PlanRequest.model_validate(example_request())
-    planned = plan_trip(request)["request"]
-    from backend.app.models import Activity, ValidationRequest
-    from backend.app.validator import validate_itinerary
-    fixed = [Activity.model_validate(a) for a in planned["original_fixed_events"]]
-    activities = copy.deepcopy(planned["trip"]["activities"])
-    fixed_candidate = next(a for a in activities if a["fixed"])
-    fixed_candidate["start_time"] = "2026-11-16T09:45:00-06:00"
-    for activity in activities:
-        activity["estimated_cost"] = "999.00"
-    session = FakeSession({"choices": [{"message": {"content": json.dumps({
-        "activities": activities,
-    })}}]})
-    candidate, _ = openai_plan(request, fixed, demo_places(), "test-key", "test-model", session)
-    planned["trip"]["activities"] = [a.model_dump(mode="json") for a in candidate]
-    checked = validate_itinerary(ValidationRequest.model_validate(planned))
-    assert "FIXED_EVENT_MOVED" in {v.code for v in checked.violations}
-    assert all(a.estimated_cost != Decimal("999.00") for a in candidate)
-    assert all(a.estimated_cost is None or isinstance(a.estimated_cost, Decimal) for a in candidate)
-
-
 def test_generated_ids_do_not_collide_with_user_commitments():
     data = example_request()
     data["fixed_events"][0]["id"] = "visit:demo:art"
@@ -313,31 +285,3 @@ def test_generated_ids_do_not_collide_with_user_commitments():
     ids = [a["id"] for a in result["request"]["trip"]["activities"]]
     assert len(ids) == len(set(ids)) == 5
     assert result["validation"]["is_valid"]
-
-
-def test_ai_cannot_change_known_place_coordinates():
-    data = plan_trip(PlanRequest.model_validate(example_request()))["request"]
-    activity = next(a for a in data["trip"]["activities"] if not a["fixed"])
-    activity["location"]["latitude"] = 0
-    session = FakeSession({"choices": [{"message": {"content": json.dumps({
-        "activities": [activity],
-    })}}]})
-    with pytest.raises(ProviderError, match="unknown-place"):
-        openai_plan(PlanRequest.model_validate(example_request()), [], demo_places(),
-                    "test-key", "test-model", session)
-
-
-def test_shared_place_does_not_overwrite_a_visits_ticket_cost():
-    from backend.app.models import Activity
-    request = PlanRequest.model_validate(example_request())
-    place = demo_places()[0]
-    fixed = Activity(id="meeting", name="Meeting", location=place.location,
-                     start_time="2026-11-16T09:00:00-06:00",
-                     end_time="2026-11-16T10:00:00-06:00", fixed=True, estimated_cost="0.00")
-    visit = fixed.model_copy(update={"id": "visit", "fixed": False, "estimated_cost": None})
-    session = FakeSession({"choices": [{"message": {"content": json.dumps({
-        "activities": [fixed.model_dump(mode="json"), visit.model_dump(mode="json")],
-    })}}]})
-    candidates, _ = openai_plan(request, [fixed], [place], "test-key", "test-model", session)
-    assert candidates[0].estimated_cost == Decimal("0.00")
-    assert candidates[1].estimated_cost == Decimal("35.00")
