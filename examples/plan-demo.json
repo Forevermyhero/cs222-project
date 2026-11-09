@@ -1,0 +1,25 @@
+{
+  "destination": "Chicago",
+  "start_date": "2026-11-16",
+  "end_date": "2026-11-17",
+  "timezone": "America/Chicago",
+  "preferences": [
+    "museums",
+    "architecture"
+  ],
+  "requested_places": [
+    "Art Institute of Chicago"
+  ],
+  "budget": "100.00",
+  "data_mode": "demo",
+  "planner": "heuristic",
+  "fixed_events": [
+    {
+      "id": "interview",
+      "name": "Interview",
+      "location": "Demo office",
+      "start_time": "2026-11-16T10:00",
+      "end_time": "2026-11-16T11:00"
+    }
+  ]
+}

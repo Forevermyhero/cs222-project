@@ -1,132 +1,100 @@
 # Architecture
 
-## Status and milestone
+## Implemented workflow
 
-This is a design, not an inventory of implemented services. Before this documentation
-change, the repository contained only a one-line README and one initial commit.
-Only the README and the four files under `docs/` are implemented in this milestone.
-
-The first coding milestone is a request-scoped backend validator. It accepts facts,
-evaluates them, and returns explanations. It needs no persistence or network calls.
-
-## Component boundaries
+The Flask application serves a small JavaScript frontend and JSON endpoints. The
+rule-based planner and synthetic data make the entire application usable offline.
+Live map services and optional OpenAI generation are separate, explicit selections.
 
 ```mermaid
-flowchart LR
-    Client[Client or future React UI] --> API[FastAPI POST /validate]
-    API --> Models[Pydantic request parsing]
-    Models --> Rules[Pure Python validator]
-    Rules --> Result[Violations and coverage warnings]
-    Result --> API
-    Future[Future AI and Places/Routes adapters] -. structured candidates and facts .-> Client
+flowchart TD
+    User[Trip form] --> API[Flask /api/plan]
+    API --> Input[Pydantic request parsing]
+    Input --> Baseline[Retain original fixed events]
+    Baseline --> Data[Demo facts or public-data adapters]
+    Data --> Planner[Heuristic planner or optional OpenAI]
+    Planner --> Validator[Pure Python validation]
+    Baseline --> Validator
+    Validator --> Result[Trip, violations, warnings and attribution]
+    Result --> User
 ```
 
-| Component | Responsibility | First MVP? |
-| --- | --- | --- |
-| Pydantic models | Parse JSON, enforce shape and field constraints, define response types | Yes, planned |
-| Pure validator | Evaluate scheduling rules; generate deterministic explanations | Yes, planned |
-| FastAPI route | Parse request, call validator, return result; use standard 422 errors | Yes, planned |
-| Pytest suite | Exercise models, pure rules, immutability, and API contract offline | Yes, planned |
-| React/TypeScript UI | Edit trips; display violations and missing-data warnings | Later |
-| SQLite/SQLAlchemy | Store trips and versions when persistence is needed | Later |
-| OpenAI adapter | Generate structured candidate activities; never determine validity | Later |
-| Google Places/Routes adapters | Supply opening windows and directed travel durations | Later |
-| Repair service | Propose changes to flexible events, preserve fixed events, revalidate | Later |
+`POST /validate` also exposes the pure validator independently of generation and
+network services. It receives the original fixed events separately from the
+candidate, so generation cannot redefine what counts as preserved.
 
-Dependencies flow from the HTTP layer into the models and pure validator. The
-validator must not import FastAPI, SQLAlchemy, provider SDKs, or HTTP clients. It
-must not read the current time, process environment, database, or network.
+## Files and boundaries
 
-## Planned file layout
+| Path | Responsibility |
+| --- | --- |
+| `backend/app/models.py` | Shape/type checks and request limits |
+| `backend/app/validator.py` | Pure deterministic rules, with no I/O or mutation |
+| `backend/app/time_utils.py` | Explicit local-to-aware conversion with DST checks |
+| `backend/app/main.py` | Flask factory, routes, safe error responses, static assets |
+| `backend/app/services/pipeline.py` | Retain baseline, collect facts, generate, validate |
+| `backend/app/services/generation.py` | Greedy scheduling and optional OpenAI adapter |
+| `backend/app/services/providers.py` | Cached, bounded, named public-service requests |
+| `backend/app/services/opening_hours.py` | Conservative subset of OSM weekly hours |
+| `backend/app/services/demo.py` | Explicit synthetic Chicago fixture and example input |
+| `frontend/` | Accessible form, fixed-event input, schedule and issue display |
+| `backend/tests/` | Offline model, rule, provider, pipeline and HTTP-contract tests |
+| `scripts/` | Explicit live-provider and browser smoke checks |
 
-Every path below is **planned**, except `README.md` and the four listed documents.
-Create files as their implementation tasks require them; empty scaffolding is not
-part of the documentation milestone.
+The frontend does not receive secrets or call provider APIs directly. The validator
+does not import Flask, requests, environment configuration or provider adapters.
+Dependencies and prices are not inferred from an LLM's confidence.
 
-```text
-README.md                         # exists: project overview and status
-docs/
-  architecture.md                 # exists: this design
-  mvp-spec.md                     # exists: contract and rules
-  implementation-plan.md          # exists: coding tasks
-  test-plan.md                    # exists: test cases
-backend/                          # planned
-  __init__.py
-  requirements.in                 # direct runtime/test dependency bounds
-  requirements.lock               # resolved versions for reproducible installs
-  app/
-    __init__.py
-    models.py                     # Pydantic request/response models
-    validator.py                  # pure validation entry point and rule helpers
-    main.py                       # app object and POST /validate
-    services/                     # later: external data and planning adapters
-  tests/
-    __init__.py
-    conftest.py                   # fresh deterministic fixture factories
-    test_models.py
-    test_validator.py
-    test_api.py
-frontend/                         # later: React/TypeScript, not created now
-```
+## Planning and validation
 
-Use `backend.app` imports and run commands from the repository root. Do not add
-path hacks or assume `cd backend` is interchangeable. If a future packaging change
-is necessary, update the commands and tests together.
+The heuristic planner tries 60-minute visits at 15-minute increments between 09:00
+and 18:00 in the trip timezone. It uses known opening windows and directed route
+estimates to find slots around the original commitments. Unknown routes receive a
+30-minute planning buffer but remain missing facts in the independent validator.
+Activities that cannot fit are listed explicitly. This is a small greedy scheduler,
+not a global optimizer, and it does not implement rich preference ranking.
 
-## Request lifecycle
+The optional OpenAI adapter requests JSON, parses it through the same models,
+rejects unknown or changed places, and discards ungrounded price suggestions.
+It does not silently correct moved/deleted fixed events: the separate baseline
+allows the validator to identify those violations. Malformed AI output yields a
+clear service error. No live AI request is claimed without a configured key and
+an executed test.
 
-1. FastAPI parses a `ValidationRequest` using Pydantic 2. Unknown fields, invalid
-   types, negative amounts, duplicate IDs/fact keys, or naive timestamps produce
-   the standard HTTP 422 response. No itinerary result is returned for malformed input.
-2. The pure function `validate_itinerary(request) -> ValidationResult` creates local
-   sorted/indexed views; it never reorders or edits the caller's activities.
-3. It converts aware datetimes to UTC for all comparisons and elapsed durations.
-   Trip date boundaries are constructed in the trip's IANA timezone, then converted
-   to UTC. Monetary calculations use `Decimal`.
-4. Independent checks collect violations. Travel evaluation waits until intervals
-   are positive and nonoverlapping; an invalid temporal schedule produces an explicit
-   skipped-travel warning instead of inventing a route order.
-5. The function returns stable, sorted violations and warnings. `is_valid` means
-   no violations of checked constraints; missing facts can still produce warnings.
-6. The endpoint serializes the result as HTTP 200, even for an invalid itinerary.
+## External facts and uncertainty
 
-The full contract and example payloads are in [mvp-spec.md](mvp-spec.md).
+Open-Meteo resolves the city; Nominatim resolves explicitly requested places and
+fixed-event addresses; Overpass supplies a small attraction list and raw opening
+tags; OSRM supplies directed driving durations, rounded up to whole minutes.
+Opening tags use the destination timezone, independently of the trip display zone.
+Coordinates may also be provided for fixed events through the JSON API.
 
-## Scope choices and ownership
+Opening strings support `24/7`, daily time ranges, weekday/range selectors, comma
+separated time ranges, overnight periods, and `off`/`closed`. Holiday, seasonal,
+sunrise/sunset, and other unsupported expressions remain unknown. An explicit empty
+set of windows means closed; no record means unavailable information.
 
-- **Time:** require offset-aware timestamps and a trip timezone; use concrete
-  opening windows, not a weekly opening-hours parser. There is no implicit system timezone.
-- **Places:** compare stable location IDs, not names or addresses. A location is an
-  ID and display name; geocoding is a later adapter responsibility.
-- **Travel:** use caller-supplied integer minutes for directed consecutive legs.
-  No geospatial estimation, traffic prediction, or travel-mode selection yet.
-- **Money:** one currency per trip, exact cents, no conversion. Budget includes
-  activity estimates only; add transport as an activity cost when it should count.
-- **Fixed commitments:** `fixed=true` is a future repair constraint. Validation
-  applies the same rules to every event and never moves either fixed or flexible ones.
-- **Data quality:** warnings expose missing facts. An itinerary may pass known
-  constraints without being fully verified against travel or opening data.
+Essential place lookup failures produce 503. Missing route data can produce a
+candidate with explicit incomplete-validation warnings. There is no silent switch
+from live to synthetic data. Public-service capacity and coverage are limited.
 
-Suggested responsibilities are work areas, not assignments to assumed teammates:
+## Team responsibilities from the final proposal
 
-| Work area | Owns | Coordination point |
-| --- | --- | --- |
-| Models/contracts | Request and result schemas, input-error cases | Agree on field names before API/UI work |
-| Validation | Pure rules and explanations | Follow spec codes and temporal semantics |
-| Tests | Shared example factories and expected behaviors | Keep fixtures independent of provider data |
-| API integration | Thin route and HTTP tests | Reuse the pure function and result schema |
+These are planned leads, not claims about completed individual work:
 
-The tasks can be implemented by one student in order. Tests accompany each task;
-the dedicated test task expands cross-rule and boundary coverage.
+| Member | Proposed lead responsibility |
+| --- | --- |
+| Yuqing | AI integration |
+| Che | AI and external API integration |
+| Xintong | Validation and repair logic |
+| Zhanyang | Web frontend |
 
-## Later integration guardrails
+Backend integration, testing and interface review are shared. The current code
+provides a common baseline for those areas; it does not assign ownership based on
+who generated or reviewed this scaffold.
 
-AI output is untrusted candidate input and must pass the same Pydantic and rule
-checks. Provider responses should be translated into the existing fact models in
-adapters, with their availability exposed. Database records should be mapped into
-the request contract rather than becoming validator dependencies.
+## Deliberately deferred
 
-Repair should copy the candidate, treat fixed events' IDs, locations, start/end
-instants, and fixed flags as invariants, modify flexible events only, and revalidate
-the result. Conflicting fixed events must be explained as unsatisfied constraints;
-repair cannot silently move them. The actual repair algorithm is outside this MVP.
+There is no database, authentication, booking/payment functionality, automatic
+repair, live traffic, transit/walking route engine, or global optimization. Trips
+remain in the browser's memory and can be downloaded as JSON. Future persistence
+and repair should reuse the contracts and independently revalidate their output.

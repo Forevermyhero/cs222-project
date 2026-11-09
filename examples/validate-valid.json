@@ -1,0 +1,76 @@
+{
+  "trip": {
+    "destination": "Chicago",
+    "start_date": "2026-11-16",
+    "end_date": "2026-11-16",
+    "timezone": "America/Chicago",
+    "budget": "60.00",
+    "activities": [
+      {
+        "id": "interview",
+        "name": "Interview",
+        "location": {
+          "id": "office",
+          "name": "Office"
+        },
+        "start_time": "2026-11-16T09:00:00-06:00",
+        "end_time": "2026-11-16T10:00:00-06:00",
+        "estimated_cost": "0.00",
+        "fixed": true
+      },
+      {
+        "id": "museum",
+        "name": "Museum",
+        "location": {
+          "id": "museum",
+          "name": "Museum"
+        },
+        "start_time": "2026-11-16T10:30:00-06:00",
+        "end_time": "2026-11-16T12:00:00-06:00",
+        "estimated_cost": "35.00",
+        "fixed": false
+      }
+    ]
+  },
+  "original_fixed_events": [
+    {
+      "id": "interview",
+      "name": "Interview",
+      "location": {
+        "id": "office",
+        "name": "Office"
+      },
+      "start_time": "2026-11-16T09:00:00-06:00",
+      "end_time": "2026-11-16T10:00:00-06:00",
+      "estimated_cost": "0.00",
+      "fixed": true
+    }
+  ],
+  "travel_times": [
+    {
+      "from_location_id": "office",
+      "to_location_id": "museum",
+      "minutes": 20
+    }
+  ],
+  "opening_hours": [
+    {
+      "location_id": "office",
+      "windows": [
+        {
+          "start_time": "2026-11-16T08:00:00-06:00",
+          "end_time": "2026-11-16T18:00:00-06:00"
+        }
+      ]
+    },
+    {
+      "location_id": "museum",
+      "windows": [
+        {
+          "start_time": "2026-11-16T08:00:00-06:00",
+          "end_time": "2026-11-16T18:00:00-06:00"
+        }
+      ]
+    }
+  ]
+}

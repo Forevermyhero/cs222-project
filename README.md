@@ -1,88 +1,142 @@
 # Itinerary That Holds Up
 
-A UIUC CS222 Software Design Lab team project: an AI-assisted travel planner that
-builds realistic itineraries around fixed commitments such as interviews, flights,
-meetings, and reservations.
+A UIUC CS222 travel-planning prototype built around commitments that must stay fixed.
+Users enter a city, dates, preferences, desired places, and fixed events. A candidate
+planner proposes a schedule; an independent Python validator explains whether it
+fits the supplied constraints.
 
-The intended system separates **generating suggestions** from **checking whether a
-schedule works**. AI can propose activities; deterministic Python rules will explain
-overlaps, travel-time problems, budget overruns, and visits to closed locations.
-Future repair must preserve fixed commitments.
+## What is implemented
 
-## Current status
+- A Flask backend and responsive HTML/CSS/JavaScript interface.
+- Pydantic contracts for trips, activities, authoritative original fixed events,
+  directed travel estimates, opening windows, and validation results.
+- Deterministic overlap, travel-time, opening-hour, trip-bound, and fixed-event checks.
+- Optional budget checks using supplied estimates; unknown prices remain unknown.
+- A no-key rule-based planner and a completely offline Chicago demonstration.
+- Adapters for Open-Meteo geocoding, OpenStreetMap via Nominatim/Overpass, and OSRM driving times.
+- An optional OpenAI candidate generator, with schema checks and independent revalidation.
+- Offline regression tests, opt-in HTTP/browser/live-service smoke checks, and GitHub Actions.
 
-Repository inspection found one commit, `d26d7e9` (`Initial commit`), containing only
-this README. The remote `main` matched that commit at inspection. No application,
-dependency manifest, tests, CI workflow, or development scripts existed.
+This follows the final proposal's Flask/basic-JavaScript direction. The original
+FastAPI/React-only design has been replaced. Persistence, automatic repair, transit
+routing, bookings, and global schedule optimization remain future work.
 
-This documentation milestone adds the architecture, MVP contract, implementation
-tasks, and test plan. **Application implementation has not started.** There is no
-server or frontend to run yet. No teammate implementation is assumed.
+## Run locally
 
-## First development milestone
-
-Implement an offline backend that accepts a structured trip at `POST /validate`
-and returns deterministic violations and data-coverage warnings. Completion means:
-
-- Pydantic models enforce the documented request and response shapes.
-- A pure Python validator checks intervals, trip bounds, overlaps, travel time,
-  budget, and supplied opening hours without changing the input.
-- Pytest covers valid, invalid, boundary, and missing-data cases.
-- A thin FastAPI endpoint exposes the same behavior and has API tests.
-
-No API keys, database, React app, AI generation, live place lookup, authentication,
-or automatic repair are required for this milestone.
-
-## Documentation
-
-| Document | Purpose |
-| --- | --- |
-| [Architecture](docs/architecture.md) | Boundaries, component responsibilities, and planned file layout |
-| [MVP specification](docs/mvp-spec.md) | Schemas, validation rules, boundary behavior, and example API exchange |
-| [Implementation plan](docs/implementation-plan.md) | Small coding tasks, acceptance criteria, checks, and suggested commits |
-| [Test plan](docs/test-plan.md) | Reproducible inputs and expected results for pytest |
-
-## Setup and execution status
-
-**Available now:** the repository and these Markdown documents. Read the documents
-and implement task 1 in the [implementation plan](docs/implementation-plan.md).
-
-**Planned development baseline:** Python 3.12, Pydantic 2, FastAPI, pytest, and HTTPX
-(for FastAPI's test client). The coding tasks will add a backend dependency manifest
-with bounded major versions and record the resolved versions in a lockfile. These
-files and dependencies have not been added or installed by this documentation work.
-
-Once task 1 adds the dependency files, the intended setup from the repository root is:
+Use Python 3.12. From the repository root:
 
 ```sh
-python3.12 -m venv /workspace/.venvs/cs222-project
-. /workspace/.venvs/cs222-project/bin/activate
-python -m pip install -r backend/requirements.lock
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install --require-hashes -r backend/requirements.lock
+python -m flask --app backend.app.main:create_app run --host 127.0.0.1 --port 8000
 ```
 
-For a local machine, substitute a virtual-environment path outside the checkout.
-Do not run the install command until that lockfile exists. It should contain runtime
-and test dependencies and be regenerated intentionally when dependencies change.
+Open the locally running application in your browser. The page loads the Chicago
+example; select **Build & check my itinerary**. It schedules four flexible visits
+around the fixed interview. Demo hours, prices, office coordinates, and 20-minute
+travel estimates are synthetic fixtures, explicitly labeled in the result.
 
-After the relevant implementation tasks are complete, the intended commands,
-all from the repository root with the virtual environment activated, are:
+The current cloud instance uses `/workspace/.venvs/cs222-project` instead of `.venv`.
+Activate that existing environment when continuing work here. Each cloud task is
+already isolated; use the existing checkout without creating another Git worktree.
+
+## Modes and external services
+
+| Mode | Credentials | Behavior |
+| --- | --- | --- |
+| Example data + rule-based planner | None | Offline, deterministic, synthetic Chicago facts |
+| Live public data + rule-based planner | None | Fetch city, places/opening tags, and estimated driving times |
+| OpenAI planner | Server-side key | Generate structured candidates using supplied places, then validate |
+
+Live services require outbound access to:
+
+- `geocoding-api.open-meteo.com`
+- `nominatim.openstreetmap.org`
+- `overpass-api.de`
+- `router.project-osrm.org`
+
+These public endpoints have limited capacity and no availability guarantee. Queries
+are cached for 15 minutes. Nominatim calls are serialized at no more than one per
+second; there is no autocomplete or bulk geocoding. Attribution is shown in the UI.
+
+The managed cloud's current network policy initially blocked these domains. Domain
+additions were saved as an environment draft; a saved draft does not establish live
+connectivity. See [validation evidence](docs/validation-report.md) for observed outcomes.
+
+For optional AI planning, configure `PLANNER_API_KEY` securely in the server
+process and optionally set `PLANNER_MODEL` (default `gpt-4.1-mini`). Permit
+`api.openai.com` in the server's outbound policy. `.env.example` documents names;
+the app does not automatically load `.env` files. Keys never belong in the frontend,
+repository, screenshots, or report output. OpenAI is not advertised as a free service.
+Without a configured key, the OpenAI UI option is disabled; explicit API attempts
+return a clear 503 instead of silently switching planners.
+
+## Tests and functional checks
+
+With the environment activated, from the repository root:
 
 ```sh
-# After models, validator, and their tests exist:
-python -m pytest backend/tests
-
-# After the API task adds app/main.py and the Uvicorn runtime dependency:
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m flake8 backend scripts
+python -m pytest --cov=backend/app --cov-report=term-missing --cov-fail-under=90
 ```
 
-These are future instructions, not claims of a working application or passing tests.
-No environment variables, credentials, network services, or database should be
-required to run the first MVP after installing dependencies.
+The pytest suite forbids real HTTP requests and uses injected provider responses.
+It does not require API keys, public endpoints, a database, or a running server.
 
-## Longer-term direction
+To deliberately test the real no-key providers:
 
-The proposed full stack is FastAPI/Pydantic, React/TypeScript, SQLite/SQLAlchemy,
-OpenAI for candidate planning, and Google Places/Routes for external facts. Add
-those components only after the validator milestone is reliable. External adapters
-will supply structured facts; the validator will remain deterministic and independently
-testable. See the architecture document for the boundary between planned components.
+```sh
+python -m scripts.smoke_live --destination Chicago
+```
+
+This makes real public requests and exits nonzero when a required service fails.
+Missing or unsupported opening data is reported as incomplete coverage, not guessed.
+It is deliberately separate from CI. OSRM estimates are for **driving**, without
+live traffic; this prototype does not claim walking or transit estimates.
+
+Optional browser checks need Playwright and an installed Chromium, separately from
+application dependencies. With the Flask server running and that tooling available:
+
+```sh
+python -m scripts.smoke_browser --chromium /usr/bin/chromium
+```
+
+The script checks desktop/mobile planning, fixed-event display, revalidation,
+download, error messages, and safe rendering of user text. Outputs are ignored under
+`test-results/`. [Recorded checks](docs/validation-report.md) distinguish executed
+checks, mocked integrations, and blocked live operations.
+
+## API examples
+
+```sh
+curl --fail-with-body -H 'Content-Type: application/json' \
+  --data-binary @examples/plan-demo.json http://127.0.0.1:8000/api/plan
+curl --fail-with-body -H 'Content-Type: application/json' \
+  --data-binary @examples/validate-valid.json http://127.0.0.1:8000/validate
+```
+
+`POST /api/plan` returns the candidate trip, its authoritative fixed-event baseline,
+facts, validation, source mode, planner name, notes and attribution. Its `request`
+field can be sent directly to `POST /validate` after editing flexible activities.
+A positive `is_valid` means no failed **known** constraints. Warnings mean some
+checks remain unverified; the UI presents this as **Partially checked**.
+
+## Development references
+
+- [Architecture and responsibilities](docs/architecture.md)
+- [Implemented API and rule contract](docs/mvp-spec.md)
+- [Completed work and next tasks](docs/implementation-plan.md)
+- [Test strategy](docs/test-plan.md)
+- [Validation evidence and limitations](docs/validation-report.md)
+
+Update direct dependency bounds in `backend/requirements.in` intentionally, then
+regenerate the lock with pip-tools and review the result:
+
+```sh
+python -m piptools compile --generate-hashes --no-emit-index-url \
+  --no-emit-trusted-host --output-file backend/requirements.lock backend/requirements.in
+```
+
+pip-tools is a separate development tool, not a runtime dependency. Major changes
+should use a feature branch and PR, with another teammate reviewing before merge.
