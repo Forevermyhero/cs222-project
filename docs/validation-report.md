@@ -1,6 +1,7 @@
 # Validation evidence
 
-This report describes the current `feat/flask-itinerary-mvp` source tree. It does
+This report describes the implementation now consolidated on `main`. Checks were
+run on the feature branch before its fast-forward merge. This report does
 not claim a public deployment or a verified remote GitHub Actions result.
 
 ## Executed checks

@@ -2,7 +2,7 @@
 
 ## A three-minute walkthrough
 
-1. Open the feature branch and `docs/code-tour.zh-CN.md` to locate the modules.
+1. Open the main branch and `docs/code-tour.zh-CN.md` to locate the modules.
 2. Run the README startup command from the repository root.
 3. Load the Chicago example. Point out the fixed interview, destination, dates and desired place.
 4. Click **Build & check my itinerary**. Show the unchanged interview and four flexible visits.
