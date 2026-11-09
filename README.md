@@ -65,6 +65,12 @@ are synthetic and visibly labeled; no site is contacted in this mode.
 
 ## Inspect the data tools without planning
 
+For a cloud-hosted Python backend and interactive website, use the
+[Render deployment guide](docs/cloud-demo.zh-CN.md) and the root `render.yaml`:
+[Deploy to Render](https://render.com/deploy?repo=https://github.com/Forevermyhero/cs222-project).
+The account owner must sign in and create the Free service; deployment is not
+claimed complete until its actual URL and responses are verified.
+
 Open `/tools` for the Chinese workbench: enter a city, optionally resolve one named
 place, inspect nearby coordinates/OSM opening tags/website tags, and select A/B to
 query directed driving estimates. Expand each operation to see structured data or

@@ -6,6 +6,11 @@ The prototype has a Flask backend and a plain HTML/CSS/JavaScript frontend. All
 application code lives under `src/`; tests and operational scripts are separate.
 There is no active LLM integration or paid-service call.
 
+`render.yaml` prepares the complete app for a free Render Web Service using
+Gunicorn and `src/backend/gunicorn_config.py`. The deployment entry was verified
+locally; account login/service creation and remote verification remain pending.
+See [cloud deployment](cloud-demo.zh-CN.md).
+
 ```mermaid
 flowchart TD
     Form[Trip form: app.js] --> HTTP[api.js: POST /api/plan/stream]

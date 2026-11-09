@@ -1,0 +1,16 @@
+# A full Flask service: the browser calls Python, and Python queries map providers.
+services:
+  - type: web
+    name: itinerary-that-holds-up
+    runtime: python
+    plan: free
+    branch: main
+    autoDeploy: false
+    buildCommand: python -m pip install --require-hashes -r requirements.lock
+    startCommand: >-
+      python -m gunicorn --config python:src.backend.gunicorn_config
+      'src.backend.app.main:create_app()'
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14

@@ -1,5 +1,6 @@
 # Application dependencies and offline test tools; no LLM SDK is required.
 Flask>=3.1,<4
+gunicorn>=23,<27; sys_platform != "win32"
 pydantic>=2.10,<3
 requests>=2.32,<3
 tzdata>=2025.1

@@ -151,6 +151,8 @@ src/
 | [.flake8](../.flake8) | Python 风格检查设置。 |
 | [.gitignore](../.gitignore) | 避免提交缓存、虚拟环境、临时测试输出和 `.env`。 |
 | [.github/workflows/tests.yml](../.github/workflows/tests.yml) | GitHub 推送/PR 后自动运行安装、风格和离线测试。 |
+| [render.yaml](../render.yaml) | 完整 Flask 服务的 Render 免费部署配置，账号拥有者登录创建服务后才会上线。 |
+| [gunicorn_config.py](../src/backend/gunicorn_config.py) | 云端 WSGI 启动参数、PORT、线程和长请求超时；不负责业务排程。 |
 | [README.md](../README.md) | 安装、启动、模式和检查命令的入口。 |
 | [docs/architecture.md](architecture.md) | 组件与调用关系。 |
 | [docs/mvp-spec.md](mvp-spec.md) | API 字段、验证规则、时间边界和进度流协议。 |

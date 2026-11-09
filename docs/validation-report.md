@@ -18,6 +18,12 @@ not claim a public deployment or a verified remote GitHub Actions result.
 | Browser safety | User markup rendered as text; unsafe links rejected; no page JavaScript errors |
 | Stream behavior | A first progress event reaches the client while an injected slow lookup is still waiting; terminal success/errors are handled separately |
 | Tool workbench | Portable bundle and backend demo tested in Chromium: coordinates, opening tags, unknowns, directed times, JSON export, cache, failed live-mode handling and offline/mobile behavior; public responses were mocked |
+| Cloud startup preparation | Render YAML parsed; hash-locked Gunicorn installed; all prior dependency pins retained. The same Gunicorn factory/config passed local health, four-tool discovery, streamed five-activity planning, and both browser smoke flows on port 8001 |
+
+`render.yaml` selects a Free Python web service. Its local Gunicorn verification
+does not establish a Render deployment or public-service connectivity. Creating
+the service needs the account owner to sign in via the
+[cloud deployment guide](cloud-demo.zh-CN.md). No confirmed Render URL is available yet.
 
 The portable bundle's exact bytes were served over an intercepted local URL for
 browser testing. Managed Chromium blocked `file://` navigation; browser policy was
